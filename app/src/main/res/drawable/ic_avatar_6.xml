@@ -1,0 +1,9 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp" android:height="96dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#C62828" android:pathData="M12,2a10,10 0,1 1,0 20a10,10 0,1 1,0 -20z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M12,7a3,3 0,1 1,0 6a3,3 0,1 1,0 -6z"/>
+    <path android:fillColor="#FFFFFF" android:pathData="M6,18a6,6 0,0 1,12 0z"/>
+    <!-- Capucha: un arco más grande alrededor de la cabeza -->
+    <path android:fillColor="#FFFFFF" android:pathData="M5,18a7,7 0,1 1,14 0z"/>
+</vector>

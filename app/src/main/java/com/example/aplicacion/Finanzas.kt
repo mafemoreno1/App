@@ -1,197 +1,245 @@
 package com.example.aplicacion
 
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.*
 
 class Finanzas : ComponentActivity() {
+
+    private lateinit var auth: FirebaseAuth
+    private lateinit var database: DatabaseReference
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        auth = FirebaseAuth.getInstance()
+        database = FirebaseDatabase.getInstance().reference.child("Finanzas")
+
         setContent {
-            FinanzasScreen()
+            PantallaFinanzas(
+                onVolver = { finish() },
+                auth = auth,
+                database = database
+            )
         }
     }
 }
 
 @Composable
-fun FinanzasScreen() {
-    val colorPrincipal = Color(0xFF3F51B5)
-    val colorClaro = Color(0xFFD6D9FF)
-    val context = LocalContext.current
+fun PantallaFinanzas(onVolver: () -> Unit, auth: FirebaseAuth, database: DatabaseReference) {
+    val userId = auth.currentUser?.uid ?: "sin_usuario"
+
+    var ingresos by remember { mutableStateOf(0.0) }
+    var gastos by remember { mutableStateOf(0.0) }
+
+    // 🔹 Cargar datos desde Firebase
+    LaunchedEffect(userId) {
+        database.child(userId).addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                ingresos = snapshot.child("ingresos").getValue(Double::class.java) ?: 0.0
+                gastos = snapshot.child("gastos").getValue(Double::class.java) ?: 0.0
+            }
+
+            override fun onCancelled(error: DatabaseError) {}
+        })
+    }
+
+    val saldo = ingresos - gastos
+    val porcentajeGasto = if (ingresos > 0) (gastos / ingresos * 100).toInt() else 0
 
     Scaffold(
-        bottomBar = { BottomNavigationBar(colorPrincipal) }
+        bottomBar = { BarraInferior() }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.White)
                 .padding(paddingValues)
-                .padding(horizontal = 24.dp, vertical = 16.dp),
+                .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Flecha atrás
-            Box(modifier = Modifier.fillMaxWidth()) {
-                IconButton(
-                    onClick = {
-                       val intent = Intent(context, Inicio::class.java)
-                        context.startActivity(intent)
-                    },
-                    modifier = Modifier.align(Alignment.TopStart).offset(y = 8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowBack,
-                        contentDescription = "Atrás",
-                        tint = colorPrincipal,
-                        modifier = Modifier.size(28.dp)
+            // 🔹 Flecha atrás
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_arrow_back),
+                    contentDescription = "Volver",
+                    colorFilter = ColorFilter.tint(Color(0xFF3F4E9A)),
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clickable { onVolver() }
+                )
+            }
+
+            // 🔹 Título
+            Text(
+                text = "Finanzas",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF3F4E9A),
+                modifier = Modifier.padding(top = 40.dp)
+            )
+
+            Spacer(modifier = Modifier.height(30.dp))
+
+            // 🔹 Saldo actual
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFCDD4FF), RoundedCornerShape(16.dp))
+                    .padding(vertical = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Saldo actual", fontSize = 16.sp, color = Color(0xFF3F4E9A))
+                    Text(
+                        text = "$${"%,.0f".format(saldo)}",
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF3F4E9A)
                     )
                 }
             }
 
-            // Título
-            Text(
-                text = "Finanzas",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = colorPrincipal,
-                modifier = Modifier.padding(top = 24.dp, bottom = 16.dp)
-            )
+            Spacer(modifier = Modifier.height(30.dp))
 
-            // Tarjeta de saldo
-            Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = colorClaro),
-                modifier = Modifier.fillMaxWidth(0.9f).height(90.dp)
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text("Saldo actual", color = colorPrincipal, fontSize = 16.sp)
-                    Text("$1.780.000", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = colorPrincipal)
+            // 🔹 Gráfico circular
+            Box(contentAlignment = Alignment.Center) {
+                Canvas(modifier = Modifier.size(180.dp)) {
+                    drawArc(
+                        color = Color(0xFFDCE0FF),
+                        startAngle = 0f,
+                        sweepAngle = 360f,
+                        useCenter = false,
+                        style = Stroke(width = 24f, cap = StrokeCap.Round)
+                    )
+                    drawArc(
+                        color = Color(0xFF3F4E9A),
+                        startAngle = -90f,
+                        sweepAngle = (porcentajeGasto / 100f) * 360f,
+                        useCenter = false,
+                        style = Stroke(width = 24f, cap = StrokeCap.Round)
+                    )
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("$porcentajeGasto%", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color(0xFF3F4E9A))
+                    Text("Gastado", fontSize = 14.sp, color = Color(0xFF3F4E9A))
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Gráfico circular
-            CircularChart(ingresos = 3200000f, gastos = 1420000f, colorPrincipal, colorClaro)
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Ingresos y gastos
+            // 🔹 Ingresos y Gastos
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                InfoCard("Ingresos", "$3.200.000", colorClaro, colorPrincipal)
-                InfoCard("Gastos", "$1.420.000", colorClaro, colorPrincipal)
+                CajaDatoFinanciero("Ingresos", ingresos, Color(0xFF3F4E9A), Modifier.weight(1f)) {
+                    val nuevoIngreso = ingresos + 500000
+                    database.child(userId).child("ingresos").setValue(nuevoIngreso)
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                CajaDatoFinanciero("Gastos", gastos, Color(0xFF3F4E9A), Modifier.weight(1f)) {
+                    val nuevoGasto = gastos + 250000
+                    database.child(userId).child("gastos").setValue(nuevoGasto)
+                }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(30.dp))
 
-            // Botón Ver historial
+            // 🔹 Botón historial
             Button(
-                onClick = { /* Navegar al historial */ },
-                colors = ButtonDefaults.buttonColors(containerColor = colorPrincipal),
-                shape = RoundedCornerShape(40),
-                modifier = Modifier.fillMaxWidth(0.9f).height(48.dp)
+                onClick = { /* acción ver historial */ },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3F4E9A)),
+                shape = RoundedCornerShape(28.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
             ) {
-                Text("Ver historial", color = Color.White, fontSize = 16.sp)
+                Text("Ver historial", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
 }
 
 @Composable
-fun CircularChart(ingresos: Float, gastos: Float, colorPrincipal: Color, colorClaro: Color) {
-    val total = ingresos + gastos
-    val porcentajeGastos = gastos / total
-
-    Box(contentAlignment = Alignment.Center) {
-        Canvas(modifier = Modifier.size(140.dp)) { // reducido de 180.dp a 140.dp
-            drawArc(
-                color = colorClaro,
-                startAngle = 0f,
-                sweepAngle = 360f,
-                useCenter = false,
-                style = Stroke(width = 20f, cap = StrokeCap.Round)
-            )
-            drawArc(
-                color = colorPrincipal,
-                startAngle = -90f,
-                sweepAngle = 360f * porcentajeGastos,
-                useCenter = false,
-                style = Stroke(width = 20f, cap = StrokeCap.Round)
-            )
-        }
-    }
-}
-
-@Composable
-fun InfoCard(title: String, value: String, color: Color, colorText: Color) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = color),
-        modifier = Modifier.width(140.dp).height(70.dp) // reducido de 150x80
+fun CajaDatoFinanciero(
+    titulo: String,
+    valor: Double,
+    colorTexto: Color,
+    modifier: Modifier = Modifier,
+    onActualizar: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .background(Color(0xFFCDD4FF), RoundedCornerShape(12.dp))
+            .padding(vertical = 12.dp)
+            .clickable { onActualizar() },
+        contentAlignment = Alignment.Center
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(title, color = colorText, fontSize = 14.sp)
-            Text(value, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = colorText)
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(text = titulo, fontSize = 16.sp, color = colorTexto)
+            Text(
+                text = "$${"%,.0f".format(valor)}",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = colorTexto
+            )
         }
     }
 }
 
 @Composable
-fun BottomNavigationBar(colorPrincipal: Color) {
-    NavigationBar(containerColor = Color.White) {
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Home, contentDescription = "Inicio", tint = colorPrincipal) },
-            label = { Text("Inicio", color = colorPrincipal) },
-            selected = true,
-            onClick = {}
+fun BarraInferior() {
+    val azul = Color(0xFF3F4E9A)
+    NavigationBar(containerColor = Color.White, tonalElevation = 6.dp) {
+        val items = listOf(
+            R.drawable.outline_home_24 to "Inicio",
+            R.drawable.outline_notifications_24 to "Alertas",
+            R.drawable.outline_assignment_turned_in_24 to "Metas",
+            R.drawable.outline_person_24 to "Asistente IA"
         )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Notifications, contentDescription = "Alertas", tint = colorPrincipal) },
-            label = { Text("Alertas", color = colorPrincipal) },
-            selected = false,
-            onClick = {}
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Flag, contentDescription = "Metas", tint = colorPrincipal) },
-            label = { Text("Metas", color = colorPrincipal) },
-            selected = false,
-            onClick = {}
-        )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.SmartToy, contentDescription = "Asistente IA", tint = colorPrincipal) },
-            label = { Text("Asistente IA", color = colorPrincipal) },
-            selected = false,
-            onClick = {}
-        )
+
+        items.forEach { (icon, label) ->
+            NavigationBarItem(
+                icon = {
+                    Image(
+                        painter = painterResource(id = icon),
+                        contentDescription = label,
+                        colorFilter = ColorFilter.tint(azul)
+                    )
+                },
+                label = { Text(label, fontSize = 11.sp, color = azul) },
+                selected = false,
+                onClick = {}
+            )
+        }
     }
 }
+
+
+

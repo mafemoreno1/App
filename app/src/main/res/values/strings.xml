@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Fin-IA</string>
+    <string name="title_activity_loginn">Loginn</string>
+    <string name="title_activity_registro">Registro</string>
+    <string name="title_activity_finanzas">Finanzas</string>
+    <string name="title_activity_finanzass">Finanzass</string>
+    <string name="title_activity_inicio">Inicio</string>
+    <string name="title_activity_contraseña">Contraseña</string>
+    <string name="title_activity_ingresos">Ingresos</string>
+    <string name="title_activity_gastos">Gastos</string>
+    <string name="title_activity_registro_gasto">RegistroGasto</string>
+    <string name="title_activity_registro_ingreso">RegistroIngreso</string>
+</resources>
