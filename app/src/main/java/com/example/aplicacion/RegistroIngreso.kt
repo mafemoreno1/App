@@ -26,26 +26,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import java.util.*
 
-// Pantalla de ingresos (solo de ejemplo)
-class IngresosActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                Text(
-                    text = "Pantalla de Ingresos",
-                    modifier = Modifier.wrapContentSize(Alignment.Center),
-                    fontSize = 24.sp
-                )
-            }
-        }
-    }
-}
-
-// Actividad principal para registrar ingresos
 class RegistroIngreso : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,6 +39,7 @@ class RegistroIngreso : ComponentActivity() {
     }
 }
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegistroIngresoScreen() {
@@ -62,32 +47,37 @@ fun RegistroIngresoScreen() {
     var monto by remember { mutableStateOf("") }
     var fecha by remember { mutableStateOf("") }
 
+
+    val categoriasIngreso = listOf("Salario", "Inversión", "Venta", "Regalo", "Otro")
+    var categoriaSeleccionada by remember { mutableStateOf(categoriasIngreso.first()) }
+    var categoriaExpandida by remember { mutableStateOf(false) }
+
+
     val azulPrincipal = Color(0xFF3F51B5)
+    val fondoCampo = Color(0xFFE8EAF6)
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
-
     val calendar = Calendar.getInstance()
-    val year = calendar.get(Calendar.YEAR)
-    val month = calendar.get(Calendar.MONTH)
-    val day = calendar.get(Calendar.DAY_OF_MONTH)
 
     val datePickerDialog = DatePickerDialog(
         context,
-        { _, selectedYear, selectedMonth, selectedDay ->
-            fecha = "$selectedDay/${selectedMonth + 1}/$selectedYear"
+        { _, year, month, dayOfMonth ->
+            fecha = "$dayOfMonth/${month + 1}/$year"
         },
-        year, month, day
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
     )
 
     Scaffold(
-        bottomBar = { BottomNavigationBar(azulPrincipal) }
+        bottomBar = { IngresoBottomNavigationBar(azulPrincipal) }
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Flecha atrás
+
             IconButton(
                 onClick = { (context as? ComponentActivity)?.finish() },
                 modifier = Modifier
@@ -106,85 +96,94 @@ fun RegistroIngresoScreen() {
                 modifier = Modifier
                     .align(Alignment.Center)
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 80.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
                     text = "Registro Ingreso",
                     color = azulPrincipal,
-                    fontSize = 28.sp,
+                    fontSize = 26.sp,
                     fontWeight = FontWeight.Bold
                 )
 
                 Spacer(modifier = Modifier.height(30.dp))
 
-                // Nombre Ingreso
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = "Nombre Ingreso",
-                        color = azulPrincipal,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    TextField(
-                        value = nombreIngreso,
-                        onValueChange = { nombreIngreso = it },
-                        textStyle = TextStyle(color = azulPrincipal),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-                        keyboardActions = KeyboardActions(
-                            onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                        ),
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = TextFieldDefaults.textFieldColors(
-                            containerColor = Color(0xDDCDD4FF),
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            cursorColor = azulPrincipal
-                        ),
-                        shape = RoundedCornerShape(8.dp)
-                    )
+                CampoTextoPersonalizadoIngreso(
+                    label = "Nombre Ingreso",
+                    valor = nombreIngreso,
+                    onChange = { nombreIngreso = it },
+                    azul = azulPrincipal,
+                    fondo = fondoCampo,
+                    imeAction = ImeAction.Next,
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                CampoTextoPersonalizadoIngreso(
+                    label = "Monto",
+
+                    valor = monto,
+                    onChange = { monto = it.replace(',', '.') },
+                    azul = azulPrincipal,
+                    fondo = fondoCampo,
+                    tipo = KeyboardType.Number,
+                    imeAction = ImeAction.Next,
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) }
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                ExposedDropdownMenuBox(
+                    expanded = categoriaExpandida,
+                    onExpandedChange = { categoriaExpandida = !categoriaExpandida },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "Categoría",
+                            color = azulPrincipal,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        TextField(
+                            value = categoriaSeleccionada,
+                            onValueChange = {},
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoriaExpandida) },
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            colors = TextFieldDefaults.textFieldColors(
+                                containerColor = fondoCampo,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent,
+                                disabledTextColor = azulPrincipal,
+                                disabledIndicatorColor = Color.Transparent
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            textStyle = TextStyle(color = azulPrincipal)
+                        )
+                    }
+
+                    ExposedDropdownMenu(
+                        expanded = categoriaExpandida,
+                        onDismissRequest = { categoriaExpandida = false }
+                    ) {
+                        categoriasIngreso.forEach { categoria ->
+                            DropdownMenuItem(
+                                text = { Text(categoria, color = azulPrincipal) },
+                                onClick = {
+                                    categoriaSeleccionada = categoria
+                                    categoriaExpandida = false
+                                }
+                            )
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Monto
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = "Monto",
-                        color = azulPrincipal,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    TextField(
-                        value = monto,
-                        onValueChange = { monto = it },
-                        textStyle = TextStyle(color = azulPrincipal),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number,
-                            imeAction = ImeAction.Next
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onNext = {
-                                focusManager.clearFocus()
-                                datePickerDialog.show()
-                            }
-                        ),
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = TextFieldDefaults.textFieldColors(
-                            containerColor = Color(0xDDCDD4FF),
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            cursorColor = azulPrincipal
-                        ),
-                        shape = RoundedCornerShape(8.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Fecha
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = "Fecha",
@@ -196,18 +195,17 @@ fun RegistroIngresoScreen() {
                     TextField(
                         value = fecha,
                         onValueChange = {},
-                        textStyle = TextStyle(color = azulPrincipal),
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { datePickerDialog.show() },
                         enabled = false,
+                        textStyle = TextStyle(color = azulPrincipal),
                         colors = TextFieldDefaults.textFieldColors(
-                            containerColor = Color(0xDDCDD4FF),
+                            containerColor = fondoCampo,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             disabledTextColor = azulPrincipal,
-                            disabledIndicatorColor = Color.Transparent,
-                            disabledLabelColor = azulPrincipal
+                            disabledIndicatorColor = Color.Transparent
                         ),
                         shape = RoundedCornerShape(8.dp)
                     )
@@ -215,31 +213,16 @@ fun RegistroIngresoScreen() {
 
                 Spacer(modifier = Modifier.height(30.dp))
 
-                // Botón Guardar Ingreso en Firebase
                 Button(
                     onClick = {
-                        if(nombreIngreso.isNotEmpty() && monto.isNotEmpty() && fecha.isNotEmpty()) {
-                            val database = FirebaseDatabase.getInstance()
-                            val ingresosRef = database.getReference("ingresos")
-                            val idIngreso = ingresosRef.push().key
-
-                            val ingreso = mapOf(
-                                "nombre" to nombreIngreso,
-                                "monto" to monto,
-                                "fecha" to fecha
+                        if (nombreIngreso.isNotEmpty() && monto.isNotEmpty() && fecha.isNotEmpty()) {
+                            guardarIngreso(
+                                context,
+                                nombreIngreso,
+                                monto,
+                                fecha,
+                                categoriaSeleccionada
                             )
-
-                            if(idIngreso != null) {
-                                ingresosRef.child(idIngreso).setValue(ingreso)
-                                    .addOnSuccessListener {
-                                        Toast.makeText(context, "Ingreso guardado", Toast.LENGTH_SHORT).show()
-                                        val intent = Intent(context, IngresosActivity::class.java)
-                                        context.startActivity(intent)
-                                    }
-                                    .addOnFailureListener {
-                                        Toast.makeText(context, "Error: ${it.message}", Toast.LENGTH_SHORT).show()
-                                    }
-                            }
                         } else {
                             Toast.makeText(context, "Completa todos los campos", Toast.LENGTH_SHORT).show()
                         }
@@ -257,37 +240,132 @@ fun RegistroIngresoScreen() {
     }
 }
 
-@Composable
-fun BottomNavigationBar(colorPrincipal: Color) {
-    NavigationBar(containerColor = Color.White) {
-        val iconos = listOf(
-            Pair(R.drawable.outline_home_24, "Inicio"),
-            Pair(R.drawable.outline_notifications_24, "Alertas"),
-            Pair(R.drawable.outline_assignment_turned_in_24, "Metas"),
-            Pair(R.drawable.outline_person_24, "Asistente IA")
+fun guardarIngreso(
+    context: android.content.Context,
+    nombre: String,
+    monto: String,
+    fecha: String,
+    categoria: String
+) {
+    val user = FirebaseAuth.getInstance().currentUser
+    if (user != null) {
+        val uid = user.uid
+        val database = FirebaseDatabase.getInstance()
+
+        val ingresosRef = database.getReference("ingresos")
+
+        val montoDouble = monto.replace(',', '.').toDoubleOrNull()
+
+        if (montoDouble == null) {
+            Toast.makeText(context, "Monto no válido. Usa números.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val idIngreso = ingresosRef.push().key
+
+
+        val ingreso = mapOf(
+            "id" to idIngreso,
+            "nombre" to nombre,
+            "monto" to montoDouble,
+            "fecha" to fecha,
+            "categoria" to categoria,
+            "tipo" to "Ingreso",
+            "uidUsuario" to uid
         )
 
-        iconos.forEach { (icono, texto) ->
+        if (idIngreso != null) {
+            ingresosRef.child(idIngreso).setValue(ingreso)
+                .addOnSuccessListener {
+                    Toast.makeText(context, "Ingreso guardado correctamente", Toast.LENGTH_SHORT).show()
+                    // Redirige al historial
+                    context.startActivity(Intent(context, Historial::class.java))
+                    (context as? ComponentActivity)?.finish()
+                }
+                .addOnFailureListener {
+                    Toast.makeText(context, "Error al guardar: ${it.message}", Toast.LENGTH_SHORT).show()
+                }
+        }
+    } else {
+        Toast.makeText(context, "Inicia sesión para guardar ingresos", Toast.LENGTH_SHORT).show()
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CampoTextoPersonalizadoIngreso(
+    label: String,
+    valor: String,
+    onChange: (String) -> Unit,
+    azul: Color,
+    fondo: Color,
+    tipo: KeyboardType = KeyboardType.Text,
+    imeAction: ImeAction,
+    onNext: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            color = azul,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        TextField(
+            value = valor,
+            onValueChange = onChange,
+            textStyle = TextStyle(color = azul),
+            keyboardOptions = KeyboardOptions(keyboardType = tipo, imeAction = imeAction),
+            keyboardActions = KeyboardActions(onNext = { onNext() }),
+            modifier = Modifier.fillMaxWidth(),
+            colors = TextFieldDefaults.textFieldColors(
+                containerColor = fondo,
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent,
+                cursorColor = azul
+            ),
+            shape = RoundedCornerShape(8.dp)
+        )
+    }
+}
+
+@Composable
+fun IngresoBottomNavigationBar(colorPrincipal: Color) {
+    val context = LocalContext.current
+
+    val navegarA: (cls: Class<*>) -> Unit = { cls ->
+        val intent = Intent(context, cls)
+        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+        context.startActivity(intent)
+        (context as? ComponentActivity)?.finish()
+    }
+
+    val iconosYAcciones = listOf(
+        Pair(R.drawable.outline_home_24, Pair("Inicio", { navegarA(Inicio::class.java) })),
+        Pair(R.drawable.outline_notifications_24, Pair("Alertas", { })),
+        Pair(R.drawable.outline_assignment_turned_in_24, Pair("Metas", { })),
+        Pair(R.drawable.outline_person_24, Pair("Asistente IA", { }))
+    )
+
+    NavigationBar(containerColor = Color.White) {
+        iconosYAcciones.forEach { (icono, textoYAccion) ->
             NavigationBarItem(
                 icon = {
                     Icon(
                         painter = painterResource(id = icono),
-                        contentDescription = texto,
-                        tint = Color(0xFF3F4E9A)
+                        contentDescription = textoYAccion.first,
+                        tint = colorPrincipal
                     )
                 },
-                label = {
-                    Text(texto, fontSize = 12.sp, color = Color(0xFF3F4E9A))
-                },
+                label = { Text(textoYAccion.first, fontSize = 12.sp, color = colorPrincipal) },
                 selected = false,
-                onClick = { },
+                onClick = textoYAccion.second,
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Color(0xFF3F4E9A),
-                    selectedTextColor = Color(0xFF3F4E9A),
+                    selectedIconColor = colorPrincipal,
+                    selectedTextColor = colorPrincipal,
                     indicatorColor = Color.Transparent
                 )
             )
         }
     }
 }
-

@@ -62,7 +62,7 @@ fun PantallaInicio() {
                 .align(Alignment.TopEnd)
                 .padding(top = 20.dp)
                 .clickable {
-                   context.startActivity(Intent(context, Perfil::class.java))
+                    context.startActivity(Intent(context, Perfil::class.java))
                 }
         )
 
@@ -101,7 +101,7 @@ fun PantallaInicio() {
                     icon = R.drawable.ic_piggy_bank,
                     texto = "Ahorros",
                     modifier = Modifier.clickable {
-                       context.startActivity(Intent(context, AhorrosActivity::class.java))
+                        context.startActivity(Intent(context, AhorrosActivity::class.java))
                     }
                 )
             }
@@ -119,7 +119,7 @@ fun PantallaInicio() {
                     .width(330.dp)
                     .height(100.dp)
                     .clickable {
-                       // context.startActivity(Intent(context, ConsejoFinancieroActivity::class.java))
+                        // context.startActivity(Intent(context, ConsejoFinancieroActivity::class.java))
                     }
             ) {
                 Row(
@@ -146,7 +146,7 @@ fun PantallaInicio() {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            //  Registro Gasto e Ingreso
+
             Row(
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
@@ -158,7 +158,7 @@ fun PantallaInicio() {
                     modifier = Modifier
                         .size(22.dp)
                         .clickable {
-                           // context.startActivity(Intent(context, RegistroGastoActivity::class.java))
+                            context.startActivity(Intent(context, RegistroGasto::class.java))
                         }
                 )
                 Spacer(modifier = Modifier.width(4.dp))
@@ -177,7 +177,7 @@ fun PantallaInicio() {
                     modifier = Modifier
                         .size(22.dp)
                         .clickable {
-                           context.startActivity(Intent(context, RegistroIngreso::class.java))
+                            context.startActivity(Intent(context, RegistroIngreso::class.java))
                         }
                 )
                 Spacer(modifier = Modifier.width(4.dp))
