@@ -46,11 +46,9 @@ fun RegistroGastoScreen() {
     var monto by remember { mutableStateOf("") }
     var fecha by remember { mutableStateOf("") }
 
-
     val categoriasGasto = listOf("Comida", "Transporte", "Servicios", "Alquiler", "Entretenimiento", "Otro")
     var categoriaSeleccionada by remember { mutableStateOf(categoriasGasto.first()) }
     var categoriaExpandida by remember { mutableStateOf(false) }
-
 
     val azulPrincipal = Color(0xFF3F51B5)
     val fondoCampo = Color(0xFFE8EAF6)
@@ -83,7 +81,6 @@ fun RegistroGastoScreen() {
                     .align(Alignment.TopStart)
                     .padding(top = 32.dp, start = 12.dp)
             ) {
-
                 Icon(
                     painter = painterResource(id = R.drawable.ic_arrow_back),
                     contentDescription = "Volver",
@@ -109,7 +106,7 @@ fun RegistroGastoScreen() {
 
                 Spacer(modifier = Modifier.height(30.dp))
 
-
+                // Campo nombre del gasto
                 CampoTextoPersonalizado(
                     label = "Nombre del Gasto",
                     valor = nombreGasto,
@@ -122,10 +119,9 @@ fun RegistroGastoScreen() {
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-
+                // Campo monto
                 CampoTextoPersonalizado(
                     label = "Monto",
-
                     valor = monto,
                     onChange = { monto = it.replace(',', '.') },
                     azul = azulPrincipal,
@@ -137,7 +133,7 @@ fun RegistroGastoScreen() {
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-
+                // Categoría
                 ExposedDropdownMenuBox(
                     expanded = categoriaExpandida,
                     onExpandedChange = { categoriaExpandida = !categoriaExpandida },
@@ -160,9 +156,7 @@ fun RegistroGastoScreen() {
                             colors = TextFieldDefaults.textFieldColors(
                                 containerColor = fondoCampo,
                                 focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent,
-                                disabledTextColor = azulPrincipal,
-                                disabledIndicatorColor = Color.Transparent
+                                unfocusedIndicatorColor = Color.Transparent
                             ),
                             shape = RoundedCornerShape(8.dp),
                             textStyle = TextStyle(color = azulPrincipal)
@@ -196,6 +190,7 @@ fun RegistroGastoScreen() {
                         fontWeight = FontWeight.SemiBold
                     )
                     Spacer(modifier = Modifier.height(6.dp))
+
                     TextField(
                         value = fecha,
                         onValueChange = {},
@@ -220,7 +215,6 @@ fun RegistroGastoScreen() {
                 Button(
                     onClick = {
                         if (nombreGasto.isNotEmpty() && monto.isNotEmpty() && fecha.isNotEmpty()) {
-
                             guardarGasto(
                                 context,
                                 nombreGasto,
@@ -245,7 +239,6 @@ fun RegistroGastoScreen() {
     }
 }
 
-
 fun guardarGasto(
     context: android.content.Context,
     nombre: String,
@@ -257,13 +250,12 @@ fun guardarGasto(
     if (user != null) {
         val uid = user.uid
         val database = FirebaseDatabase.getInstance()
-
-        val gastosRef = database.getReference("gastos")
+        val gastosRef = database.getReference("gastos").child(uid)
+        val alertasRef = database.getReference("alertas").child(uid)
 
         val montoDouble = monto.toDoubleOrNull()
-
         if (montoDouble == null) {
-            Toast.makeText(context, "Monto no válido. Usa números.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Monto no válido", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -281,6 +273,18 @@ fun guardarGasto(
 
             gastosRef.child(idGasto).setValue(gasto)
                 .addOnSuccessListener {
+                    // 🔔 Guardar alerta personalizada dentro del nodo del usuario
+                    val idAlerta = alertasRef.push().key ?: return@addOnSuccessListener
+                    val alerta = mapOf(
+                        "id" to idAlerta,
+                        "titulo" to "Nuevo Gasto",
+                        "mensaje" to "Has registrado un gasto de $$montoDouble en $categoria.",
+                        "tipo" to "gasto",
+                        "fecha" to System.currentTimeMillis(),
+                        "leida" to false
+                    )
+                    alertasRef.child(idAlerta).setValue(alerta)
+
                     Toast.makeText(context, "Gasto guardado exitosamente", Toast.LENGTH_SHORT).show()
                     context.startActivity(Intent(context, Historial::class.java))
                     (context as? ComponentActivity)?.finish()
@@ -307,12 +311,7 @@ fun CampoTextoPersonalizado(
     onNext: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = label,
-            color = azul,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold
-        )
+        Text(text = label, color = azul, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         Spacer(modifier = Modifier.height(6.dp))
         TextField(
             value = valor,
@@ -324,32 +323,28 @@ fun CampoTextoPersonalizado(
             colors = TextFieldDefaults.textFieldColors(
                 containerColor = fondo,
                 focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                cursorColor = azul
+                unfocusedIndicatorColor = Color.Transparent
             ),
             shape = RoundedCornerShape(8.dp)
         )
     }
 }
 
-
 @Composable
 fun GastosBottomNavigationBar(colorPrincipal: Color) {
     val context = LocalContext.current
-
-    val navegarA: (cls: Class<*>) -> Unit = { cls ->
+    val navegarA: (Class<*>) -> Unit = { cls ->
         val intent = Intent(context, cls)
         intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
         context.startActivity(intent)
         (context as? ComponentActivity)?.finish()
     }
 
-
     val iconosYAcciones = listOf(
         Pair(R.drawable.outline_home_24, Pair("Inicio", { navegarA(Inicio::class.java) })),
-        Pair(R.drawable.outline_notifications_24, Pair("Alertas", { })),
-        Pair(R.drawable.outline_assignment_turned_in_24, Pair("Metas", {  })),
-        Pair(R.drawable.outline_person_24, Pair("Asistente IA", {  }))
+        Pair(R.drawable.outline_notifications_24, Pair("Alertas", { navegarA(AlertasActivity::class.java) })),
+        Pair(R.drawable.outline_assignment_turned_in_24, Pair("Metas", { })),
+        Pair(R.drawable.outline_person_24, Pair("Asistente IA", { }))
     )
 
     NavigationBar(containerColor = Color.White) {
@@ -364,7 +359,6 @@ fun GastosBottomNavigationBar(colorPrincipal: Color) {
                 },
                 label = { Text(textoYAccion.first, fontSize = 12.sp, color = colorPrincipal) },
                 selected = false,
-
                 onClick = textoYAccion.second,
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = colorPrincipal,
@@ -375,5 +369,3 @@ fun GastosBottomNavigationBar(colorPrincipal: Color) {
         }
     }
 }
-
-

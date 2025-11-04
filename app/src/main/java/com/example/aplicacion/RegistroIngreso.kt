@@ -39,7 +39,6 @@ class RegistroIngreso : ComponentActivity() {
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegistroIngresoScreen() {
@@ -47,11 +46,9 @@ fun RegistroIngresoScreen() {
     var monto by remember { mutableStateOf("") }
     var fecha by remember { mutableStateOf("") }
 
-
     val categoriasIngreso = listOf("Salario", "Inversión", "Venta", "Regalo", "Otro")
     var categoriaSeleccionada by remember { mutableStateOf(categoriasIngreso.first()) }
     var categoriaExpandida by remember { mutableStateOf(false) }
-
 
     val azulPrincipal = Color(0xFF3F51B5)
     val fondoCampo = Color(0xFFE8EAF6)
@@ -123,7 +120,6 @@ fun RegistroIngresoScreen() {
 
                 CampoTextoPersonalizadoIngreso(
                     label = "Monto",
-
                     valor = monto,
                     onChange = { monto = it.replace(',', '.') },
                     azul = azulPrincipal,
@@ -192,6 +188,7 @@ fun RegistroIngresoScreen() {
                         fontWeight = FontWeight.SemiBold
                     )
                     Spacer(modifier = Modifier.height(6.dp))
+
                     TextField(
                         value = fecha,
                         onValueChange = {},
@@ -216,7 +213,7 @@ fun RegistroIngresoScreen() {
                 Button(
                     onClick = {
                         if (nombreIngreso.isNotEmpty() && monto.isNotEmpty() && fecha.isNotEmpty()) {
-                            guardarIngreso(
+                            guardarIngresoYAlerta(
                                 context,
                                 nombreIngreso,
                                 monto,
@@ -240,7 +237,7 @@ fun RegistroIngresoScreen() {
     }
 }
 
-fun guardarIngreso(
+fun guardarIngresoYAlerta(
     context: android.content.Context,
     nombre: String,
     monto: String,
@@ -248,47 +245,55 @@ fun guardarIngreso(
     categoria: String
 ) {
     val user = FirebaseAuth.getInstance().currentUser
-    if (user != null) {
-        val uid = user.uid
-        val database = FirebaseDatabase.getInstance()
-
-        val ingresosRef = database.getReference("ingresos")
-
-        val montoDouble = monto.replace(',', '.').toDoubleOrNull()
-
-        if (montoDouble == null) {
-            Toast.makeText(context, "Monto no válido. Usa números.", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val idIngreso = ingresosRef.push().key
-
-
-        val ingreso = mapOf(
-            "id" to idIngreso,
-            "nombre" to nombre,
-            "monto" to montoDouble,
-            "fecha" to fecha,
-            "categoria" to categoria,
-            "tipo" to "Ingreso",
-            "uidUsuario" to uid
-        )
-
-        if (idIngreso != null) {
-            ingresosRef.child(idIngreso).setValue(ingreso)
-                .addOnSuccessListener {
-                    Toast.makeText(context, "Ingreso guardado correctamente", Toast.LENGTH_SHORT).show()
-                    // Redirige al historial
-                    context.startActivity(Intent(context, Historial::class.java))
-                    (context as? ComponentActivity)?.finish()
-                }
-                .addOnFailureListener {
-                    Toast.makeText(context, "Error al guardar: ${it.message}", Toast.LENGTH_SHORT).show()
-                }
-        }
-    } else {
+    if (user == null) {
         Toast.makeText(context, "Inicia sesión para guardar ingresos", Toast.LENGTH_SHORT).show()
+        return
     }
+
+    val uid = user.uid
+    val database = FirebaseDatabase.getInstance()
+    val ingresosRef = database.getReference("ingresos").child(uid)
+    val alertasRef = database.getReference("alertas").child(uid)
+
+    val montoDouble = monto.replace(',', '.').toDoubleOrNull()
+    if (montoDouble == null) {
+        Toast.makeText(context, "Monto no válido. Usa números.", Toast.LENGTH_SHORT).show()
+        return
+    }
+
+    val idIngreso = ingresosRef.push().key ?: return
+    val ingreso = mapOf(
+        "id" to idIngreso,
+        "nombre" to nombre,
+        "monto" to montoDouble,
+        "fecha" to fecha,
+        "categoria" to categoria,
+        "tipo" to "Ingreso",
+        "uidUsuario" to uid
+    )
+
+    ingresosRef.child(idIngreso).setValue(ingreso)
+        .addOnSuccessListener {
+            // ✅ Crear alerta en la carpeta del usuario
+            val idAlerta = alertasRef.push().key ?: return@addOnSuccessListener
+            val alerta = mapOf(
+                "id" to idAlerta,
+                "uid" to uid,
+                "titulo" to "Nuevo ingreso registrado",
+                "mensaje" to "Has registrado un ingreso de $$montoDouble en la categoría $categoria.",
+                "tipo" to "ingreso",
+                "fecha" to System.currentTimeMillis(),
+                "leida" to false
+            )
+            alertasRef.child(idAlerta).setValue(alerta)
+
+            Toast.makeText(context, "Ingreso guardado correctamente", Toast.LENGTH_SHORT).show()
+            context.startActivity(Intent(context, Historial::class.java))
+            (context as? ComponentActivity)?.finish()
+        }
+        .addOnFailureListener {
+            Toast.makeText(context, "Error al guardar ingreso: ${it.message}", Toast.LENGTH_SHORT).show()
+        }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -342,7 +347,7 @@ fun IngresoBottomNavigationBar(colorPrincipal: Color) {
 
     val iconosYAcciones = listOf(
         Pair(R.drawable.outline_home_24, Pair("Inicio", { navegarA(Inicio::class.java) })),
-        Pair(R.drawable.outline_notifications_24, Pair("Alertas", { })),
+        Pair(R.drawable.outline_notifications_24, Pair("Alertas", { navegarA(AlertasActivity::class.java) })),
         Pair(R.drawable.outline_assignment_turned_in_24, Pair("Metas", { })),
         Pair(R.drawable.outline_person_24, Pair("Asistente IA", { }))
     )

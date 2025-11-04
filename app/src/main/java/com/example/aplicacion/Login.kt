@@ -32,6 +32,7 @@ class LoginActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         auth = FirebaseAuth.getInstance()
         setContent {
             LoginScreen(auth = auth)
@@ -102,7 +103,7 @@ fun LoginScreen(auth: FirebaseAuth) {
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
             )
 
-            // Campo de contraseña
+
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
@@ -137,7 +138,7 @@ fun LoginScreen(auth: FirebaseAuth) {
                     }
             )
 
-            // Botón Iniciar sesión
+
             Button(
                 onClick = {
                     if (email.isEmpty() || password.isEmpty()) {
@@ -176,7 +177,7 @@ fun LoginScreen(auth: FirebaseAuth) {
                 )
             }
 
-            // Botón Registrarse
+
             Button(
                 onClick = {
                     val intent = Intent(context, RegisterActivity::class.java)

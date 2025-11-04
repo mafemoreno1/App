@@ -3,6 +3,7 @@ package com.example.aplicacion
 import android.content.Intent
 import android.os.Bundle
 import android.os.Parcelable
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -46,6 +47,7 @@ fun formatMonto(monto: Double): String {
 
 fun formatFecha(fechaString: String): String {
     return try {
+
         val inputFormat = SimpleDateFormat("d/M/yyyy", Locale.getDefault())
         val date = inputFormat.parse(fechaString)
         val outputFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
@@ -54,7 +56,6 @@ fun formatFecha(fechaString: String): String {
         fechaString
     }
 }
-
 
 @Parcelize
 data class Registro(
@@ -71,6 +72,7 @@ class Historial : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+
         val navegarA: (cls: Class<*>) -> Unit = { cls ->
             val intent = Intent(this, cls)
             intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
@@ -80,9 +82,9 @@ class Historial : ComponentActivity() {
         setContent {
             HistorialScreen(
                 onInicioClick = { navegarA(Inicio::class.java) },
-                onAlertasClick = { },
-                onMetasClick = {  },
-                onAsistenteClick = {  }
+                onAlertasClick = { navegarA(AlertasActivity::class.java) },
+                onMetasClick = { /* Lógica de metas */  },
+                onAsistenteClick = { }
             )
         }
     }
@@ -97,11 +99,9 @@ fun HistorialScreen(
     onAsistenteClick: () -> Unit
 ) {
     val azulPrincipal = Color(0xFF3F51B5)
-
     val colorFondoIngreso = Color(0x283F51B5)
     val colorFondoGasto = Color(0x283F51B5)
     val context = LocalContext.current
-
 
     var registros by remember { mutableStateOf<List<Registro>>(emptyList()) }
     var estaCargando by remember { mutableStateOf(true) }
@@ -115,6 +115,7 @@ fun HistorialScreen(
         estaCargando = true
         cargarRegistros(
             onSuccess = { loadedRegistros ->
+                // NOTA: La ordenación por String de fecha (d/M/yyyy) puede ser inexacta
                 registros = loadedRegistros.sortedByDescending { it.fecha }
                 estaCargando = false
             },
@@ -204,7 +205,6 @@ fun HistorialScreen(
 
 
                 if (estaCargando && registros.isEmpty()) {
-
                     CircularProgressIndicator(modifier = Modifier.padding(20.dp), color = azulPrincipal)
                 } else if (filteredRegistros.isEmpty()) {
                     Text(
@@ -225,7 +225,7 @@ fun HistorialScreen(
                                 tipo = registro.tipo,
                                 colorFondo = if (registro.tipo == "Ingreso") colorFondoIngreso else colorFondoGasto,
                                 colorAzul = azulPrincipal,
-                                onEditar = { /* Lógica de Edición */ },
+                                onEditar = { },
                                 onEliminar = { showDeleteDialog = it },
                                 onSumarMonto = { showUpdateMontoDialog = it }
                             )
@@ -263,9 +263,6 @@ fun HistorialScreen(
     }
 }
 
-
-
-
 @Composable
 fun Pestaña(
     title: String,
@@ -302,7 +299,6 @@ fun RegistroCard(
     onEliminar: (Registro) -> Unit,
     onSumarMonto: (Registro) -> Unit
 ) {
-
     val colorMonto = if (tipo == "Ingreso") colorAzul else Color(0xFF3F51B5)
 
     Card(
@@ -514,14 +510,15 @@ fun actualizarMontoRegistro(
         return
     }
 
+    val uid = user.uid
     val database = FirebaseDatabase.getInstance()
     val refPath = if (registro.tipo == "Ingreso") "ingresos" else "gastos"
-    val ref = database.getReference(refPath).child(registro.id)
+    val ref = database.getReference(refPath).child(uid).child(registro.id)
 
     ref.child("monto").addListenerForSingleValueEvent(object : ValueEventListener {
         override fun onDataChange(snapshot: DataSnapshot) {
-            val montoActual = snapshot.getValue(Double::class.java) ?: registro.monto
 
+            val montoActual = snapshot.getValue(Double::class.java) ?: registro.monto
             val nuevoMonto = montoActual + montoAdicional
 
             ref.child("monto").setValue(nuevoMonto)
@@ -539,7 +536,6 @@ fun actualizarMontoRegistro(
         }
     })
 }
-
 
 fun cargarRegistros(
     onSuccess: (List<Registro>) -> Unit,
@@ -560,44 +556,42 @@ fun cargarRegistros(
 
     tipos.forEach { tipo ->
 
-        val ref = database.getReference(tipo)
+        val ref = database.getReference(tipo).child(uid)
 
-        ref.orderByChild("uidUsuario").equalTo(uid)
-            .addListenerForSingleValueEvent(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    snapshot.children.mapNotNullTo(registros) { registroSnapshot ->
-                        try {
-                            Registro(
-                                id = registroSnapshot.key ?: "",
-                                nombre = registroSnapshot.child("nombre").getValue(String::class.java) ?: "Sin Nombre",
-                                fecha = registroSnapshot.child("fecha").getValue(String::class.java) ?: "N/A",
-                                // El monto DEBE estar guardado como número (Double)
-                                monto = registroSnapshot.child("monto").getValue(Double::class.java) ?: 0.0,
-                                categoria = registroSnapshot.child("categoria").getValue(String::class.java) ?: "Sin Categoría",
-                                tipo = if (tipo == "ingresos") "Ingreso" else "Gasto"
-                            )
-                        } catch (e: Exception) {
-                            null
-                        }
-                    }
-
-                    consultasPendientes--
-                    if (consultasPendientes == 0) {
-                        onSuccess(registros)
+        ref.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                snapshot.children.mapNotNullTo(registros) { registroSnapshot ->
+                    try {
+                        Registro(
+                            id = registroSnapshot.key ?: "",
+                            nombre = registroSnapshot.child("nombre").getValue(String::class.java) ?: "Sin Nombre",
+                            fecha = registroSnapshot.child("fecha").getValue(String::class.java) ?: "N/A",
+                            monto = registroSnapshot.child("monto").getValue(Double::class.java) ?: 0.0,
+                            categoria = registroSnapshot.child("categoria").getValue(String::class.java) ?: "Sin Categoría",
+                            tipo = if (tipo == "ingresos") "Ingreso" else "Gasto"
+                        )
+                    } catch (e: Exception) {
+                        Log.e("Historial", "Error de lectura en $tipo: ${e.message}", e)
+                        null
                     }
                 }
 
-                override fun onCancelled(error: DatabaseError) {
-                    consultasPendientes--
-                    if (consultasPendientes == 0) {
-                        onSuccess(registros)
-                    }
-                    onError("Fallo la lectura de $tipo: ${error.message}")
+                consultasPendientes--
+                if (consultasPendientes == 0) {
+                    onSuccess(registros.sortedByDescending { it.fecha })
                 }
-            })
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                consultasPendientes--
+                if (consultasPendientes == 0) {
+                    onSuccess(registros)
+                }
+                onError("Fallo la lectura de $tipo: ${error.message}")
+            }
+        })
     }
 }
-
 
 fun eliminarRegistro(
     context: android.content.Context,
@@ -610,19 +604,37 @@ fun eliminarRegistro(
         return
     }
 
+    val uid = user.uid
     val database = FirebaseDatabase.getInstance()
+
     val refPath = if (registro.tipo == "Ingreso") "ingresos" else "gastos"
-    val ref = database.getReference(refPath).child(registro.id)
+    val ref = database.getReference(refPath).child(uid).child(registro.id)
 
     ref.removeValue()
         .addOnSuccessListener {
             Toast.makeText(context, "${registro.tipo} '${registro.nombre}' eliminado", Toast.LENGTH_SHORT).show()
+
+            val alertasRef = database.getReference("alertas").child(uid)
+            alertasRef.orderByChild("idRegistro").equalTo(registro.id)
+                .addListenerForSingleValueEvent(object : ValueEventListener {
+                    override fun onDataChange(snapshot: DataSnapshot) {
+                        for (alertaSnapshot in snapshot.children) {
+                            alertaSnapshot.ref.removeValue()
+                        }
+                    }
+
+                    override fun onCancelled(error: DatabaseError) {
+                        Toast.makeText(context, "Error al eliminar alerta: ${error.message}", Toast.LENGTH_SHORT).show()
+                    }
+                })
+
             onComplete()
         }
         .addOnFailureListener {
             Toast.makeText(context, "Error al eliminar: ${it.message}", Toast.LENGTH_SHORT).show()
         }
 }
+
 
 
 

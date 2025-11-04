@@ -5,19 +5,19 @@
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="Perfil">
+      <SelectionState runConfigName="AlertasActivity">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
       <SelectionState runConfigName="Inicio">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="EditarPerfil">
+      <SelectionState runConfigName="Historial">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="RegistroIngreso">
+      <SelectionState runConfigName="RegistroGasto">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="Ingresar">
+      <SelectionState runConfigName="Finanzas">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>

@@ -42,6 +42,8 @@ import java.util.*
 class EditarPerfil : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        //Alertas.iniciarFirebase(this)
+
         setContent { EditarPerfilScreen() }
     }
 }
@@ -94,7 +96,7 @@ fun EditarPerfilScreen() {
         }
     }
 
-    // Cargar datos actuales del usuario
+
     LaunchedEffect(Unit) {
         val uid = auth.currentUser?.uid
         if (uid == null) {
