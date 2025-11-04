@@ -31,6 +31,8 @@ class AgregarAhorroActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+
+
             AgregarAhorroScreen()
         }
     }
@@ -66,11 +68,11 @@ fun AgregarAhorroScreen() {
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))  //8
 
                 Text(
                     text = "Agregar Ahorro",
-                    fontSize = 24.sp,
+                    fontSize = 26.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF3F4E9A),
                 )
@@ -80,8 +82,8 @@ fun AgregarAhorroScreen() {
         bottomBar = {
             BottomBarAgregarAhorro(
                 onInicioClick = { context.startActivity(Intent(context, Inicio::class.java)) },
-                onAlertasClick = {},
-                onMetasClick = { context.startActivity(Intent(context, AhorrosActivity::class.java)) },
+                onAlertasClick = {context.startActivity(Intent(context, AlertasActivity::class.java))},
+                onMetasClick = { },
                 onAsistenteClick = {}
             )
         }
@@ -141,7 +143,7 @@ fun AgregarAhorroScreen() {
                 shape = RoundedCornerShape(20.dp),
                 modifier = Modifier
                     .fillMaxWidth(0.7f)
-                    .height(45.dp)
+                    .height(40.dp)
             ) {
                 Text("Guardar", color = Color.White, fontSize = 18.sp)
             }

@@ -102,12 +102,13 @@ class AhorrosActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+
             AhorrosScreen(
                 onVolverClick = { finish() },
                 onAgregarClick = { startActivity(Intent(this, AgregarAhorroActivity::class.java)) },
                 onInicioClick = { startActivity(Intent(this, Inicio::class.java)) },
-                onAlertasClick = {},
-                onMetasClick = { startActivity(Intent(this, AhorrosActivity::class.java)) },
+                onAlertasClick = {startActivity(Intent(this, AlertasActivity::class.java)) },
+                onMetasClick = {  },
                 onAsistenteClick = {}
             )
         }
@@ -182,7 +183,7 @@ fun AhorrosScreen(
             }
         },
 
-                bottomBar = { BottomBar(onInicioClick, onAlertasClick, onMetasClick, onAsistenteClick) }
+        bottomBar = { BottomBar(onInicioClick, onAlertasClick, onMetasClick, onAsistenteClick) }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -364,7 +365,9 @@ fun BottomBar(
         modifier = Modifier.height(65.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
