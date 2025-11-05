@@ -31,8 +31,6 @@ class AgregarAhorroActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-
-
             AgregarAhorroScreen()
         }
     }
@@ -57,7 +55,6 @@ fun AgregarAhorroScreen() {
                     .padding(top = 20.dp, bottom = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-
                 Box(modifier = Modifier.fillMaxWidth()) {
                     IconButton(onClick = { (context as? ComponentActivity)?.finish() }) {
                         Icon(
@@ -68,8 +65,7 @@ fun AgregarAhorroScreen() {
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(10.dp))  //8
-
+                Spacer(modifier = Modifier.height(10.dp))
                 Text(
                     text = "Agregar Ahorro",
                     fontSize = 26.sp,
@@ -82,7 +78,7 @@ fun AgregarAhorroScreen() {
         bottomBar = {
             BottomBarAgregarAhorro(
                 onInicioClick = { context.startActivity(Intent(context, Inicio::class.java)) },
-                onAlertasClick = {context.startActivity(Intent(context, AlertasActivity::class.java))},
+                onAlertasClick = { context.startActivity(Intent(context, AlertasActivity::class.java)) },
                 onMetasClick = { },
                 onAsistenteClick = {}
             )
@@ -97,9 +93,21 @@ fun AgregarAhorroScreen() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(18.dp, Alignment.CenterVertically)
         ) {
-            CampoConTitulo("Nombre", nombre, KeyboardType.Text, imeAction = ImeAction.Next) { nombre = it }
-            CampoConTitulo("Monto ahorrado", monto, KeyboardType.Number, imeAction = ImeAction.Next) { monto = it }
-            CampoConTitulo("Meta", meta, KeyboardType.Number, imeAction = ImeAction.Done) { meta = it }
+            // Validación: solo letras y espacios
+            CampoConTitulo("Nombre", nombre, KeyboardType.Text, ImeAction.Next) {
+                if (it.matches(Regex("^[A-Za-zÁÉÍÓÚáéíóúÑñ ]*$"))) nombre = it
+            }
+
+            // Validación: solo números (y opcionalmente punto)
+            CampoConTitulo("Monto ahorrado", monto, KeyboardType.Number, ImeAction.Next) {
+                if (it.matches(Regex("^\\d*\\.?\\d*\$"))) monto = it
+            }
+
+            // Validación: solo números (y opcionalmente punto)
+            CampoConTitulo("Meta", meta, KeyboardType.Number, ImeAction.Done) {
+                if (it.matches(Regex("^\\d*\\.?\\d*\$"))) meta = it
+            }
+
             FechaPickerField(fecha = fecha) { fecha = it }
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -112,32 +120,66 @@ fun AgregarAhorroScreen() {
                         return@Button
                     }
 
-                    if (nombre.isNotEmpty() && monto.isNotEmpty() && meta.isNotEmpty() && fecha.isNotEmpty()) {
-                        val ref = FirebaseDatabase.getInstance()
-                            .getReference("ahorros")
-                            .child(user.uid)
-
-                        val ahorroId = ref.push().key ?: ""
-                        val ahorro = mapOf(
-                            "id" to ahorroId,
-                            "nombre" to nombre,
-                            "monto" to monto,
-                            "meta" to meta,
-                            "fecha" to fecha
-                        )
-
-                        ref.child(ahorroId).setValue(ahorro)
-                            .addOnSuccessListener {
-                                Toast.makeText(context, "Ahorro guardado correctamente", Toast.LENGTH_SHORT).show()
-                                context.startActivity(Intent(context, AhorrosActivity::class.java))
-                                (context as? ComponentActivity)?.finish()
-                            }
-                            .addOnFailureListener {
-                                Toast.makeText(context, "Error al guardar", Toast.LENGTH_SHORT).show()
-                            }
-                    } else {
-                        Toast.makeText(context, "Por favor completa todos los campos", Toast.LENGTH_SHORT).show()
+                    // Validaciones antes de guardar
+                    when {
+                        nombre.isBlank() -> {
+                            Toast.makeText(context, "El nombre no puede estar vacío", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        monto.isBlank() || meta.isBlank() -> {
+                            Toast.makeText(context, "Completa los montos", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        monto.toDoubleOrNull() == null || meta.toDoubleOrNull() == null -> {
+                            Toast.makeText(context, "Solo números válidos en monto/meta", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        fecha.isBlank() -> {
+                            Toast.makeText(context, "Selecciona una fecha", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
                     }
+
+                    val ref = FirebaseDatabase.getInstance()
+                        .getReference("ahorros")
+                        .child(user.uid)
+
+                    val ahorroId = ref.push().key ?: ""
+                    val ahorro = mapOf(
+                        "id" to ahorroId,
+                        "nombre" to nombre.trim(),
+                        "monto" to monto.trim(),
+                        "meta" to meta.trim(),
+                        "fecha" to fecha.trim()
+                    )
+
+                    ref.child(ahorroId).setValue(ahorro)
+                        .addOnSuccessListener {
+                            // 🔔 ALERTA: nuevo ahorro registrado
+                            val alertasRef = FirebaseDatabase.getInstance()
+                                .getReference("alertas")
+                                .child(user.uid)
+
+                            val idAlerta = alertasRef.push().key
+                            if (idAlerta != null) {
+                                val alerta = mapOf(
+                                    "id" to idAlerta,
+                                    "titulo" to "Nuevo ahorro registrado",
+                                    "mensaje" to "Has creado el ahorro '$nombre' con meta de $$meta.",
+                                    "tipo" to "ahorro",
+                                    "fecha" to System.currentTimeMillis(),
+                                    "leida" to false
+                                )
+                                alertasRef.child(idAlerta).setValue(alerta)
+                            }
+
+                            Toast.makeText(context, "Ahorro guardado correctamente", Toast.LENGTH_SHORT).show()
+                            context.startActivity(Intent(context, AhorrosActivity::class.java))
+                            (context as? ComponentActivity)?.finish()
+                        }
+                        .addOnFailureListener {
+                            Toast.makeText(context, "Error al guardar", Toast.LENGTH_SHORT).show()
+                        }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3F4E9A)),
                 shape = RoundedCornerShape(20.dp),
@@ -166,9 +208,7 @@ fun FechaPickerField(fecha: String, onDateSelected: (String) -> Unit) {
                     "${(selectedMonth + 1).toString().padStart(2, '0')}/$selectedYear"
             onDateSelected(formattedDate)
         },
-        year,
-        month,
-        day
+        year, month, day
     )
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -247,7 +287,9 @@ fun BottomBarAgregarAhorro(
         modifier = Modifier.height(65.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -278,6 +320,7 @@ fun BottomBarAgregarAhorro(
         }
     }
 }
+
 
 
 

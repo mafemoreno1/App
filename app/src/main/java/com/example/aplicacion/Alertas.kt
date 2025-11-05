@@ -73,59 +73,6 @@ class AlertasActivity : ComponentActivity() {
             PantallaAlertas(listaAlertas, dbRefAlertas)
         }
     }
-
-    // Crear nueva alerta
-    fun crearAlerta(titulo: String, mensaje: String, tipo: String) {
-        val alertaId = dbRefAlertas.push().key ?: return
-        val alerta = Alerta(
-            id = alertaId,
-            uid = currentUid,
-            titulo = titulo,
-            mensaje = mensaje,
-            tipo = tipo,
-            fecha = System.currentTimeMillis(),
-            leida = false
-        )
-        dbRefAlertas.child(alertaId).setValue(alerta)
-    }
-
-    // Guardar un ingreso y crear alerta
-    fun guardarIngreso(monto: String, descripcion: String) {
-        val ingresosRef = FirebaseDatabase.getInstance()
-            .getReference("ingresos")
-            .child(currentUid)
-
-        val id = ingresosRef.push().key ?: return
-        ingresosRef.child(id).setValue(
-            mapOf(
-                "id" to id,
-                "uid" to currentUid,
-                "monto" to monto,
-                "descripcion" to descripcion,
-                "fecha" to System.currentTimeMillis()
-            )
-        )
-        crearAlerta("Nuevo Ingreso Registrado", "Has registrado un ingreso de $$monto en $descripcion.", "ingreso")
-    }
-
-    // Guardar un gasto y crear alerta
-    fun guardarGasto(monto: String, descripcion: String) {
-        val gastosRef = FirebaseDatabase.getInstance()
-            .getReference("gastos")
-            .child(currentUid)
-
-        val id = gastosRef.push().key ?: return
-        gastosRef.child(id).setValue(
-            mapOf(
-                "id" to id,
-                "uid" to currentUid,
-                "monto" to monto,
-                "descripcion" to descripcion,
-                "fecha" to System.currentTimeMillis()
-            )
-        )
-        crearAlerta("Nuevo Gasto Registrado", "Has registrado un gasto de $$monto en $descripcion.", "gasto")
-    }
 }
 
 // Modelo de datos para una alerta
@@ -175,7 +122,6 @@ fun PantallaAlertas(listaAlertas: List<Alerta>, dbRefAlertas: DatabaseReference)
             }
         },
 
-        // 🔹 Barra inferior SIN badge
         bottomBar = {
             Row(
                 modifier = Modifier
@@ -193,7 +139,7 @@ fun PantallaAlertas(listaAlertas: List<Alerta>, dbRefAlertas: DatabaseReference)
                 BottomNavItem(
                     icon = R.drawable.outline_notifications_24,
                     label = "Alertas",
-                    onClick = { /* Ya estás en esta pantalla */ }
+                    onClick = { /* Ya estás aquí */ }
                 )
                 BottomNavItem(
                     icon = R.drawable.outline_assignment_turned_in_24,
@@ -233,26 +179,49 @@ fun PantallaAlertas(listaAlertas: List<Alerta>, dbRefAlertas: DatabaseReference)
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(20.dp))
                                 .background(azulClaro)
-                                .clickable {
-                                    if (!alerta.leida) {
-                                        dbRefAlertas.child(alerta.id).child("leida").setValue(true)
-                                    }
-                                }
                                 .padding(16.dp)
                         ) {
-                            Column {
-                                Text(
-                                    text = alerta.titulo,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 18.sp,
-                                    color = azulPrincipal
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = formatMensaje(alerta.mensaje),
-                                    fontSize = 15.sp,
-                                    color = azulPrincipal,
-                                )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable {
+                                            if (!alerta.leida) {
+                                                dbRefAlertas.child(alerta.id)
+                                                    .child("leida")
+                                                    .setValue(true)
+                                            }
+                                        }
+                                ) {
+                                    Text(
+                                        text = alerta.titulo,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 18.sp,
+                                        color = azulPrincipal
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        text = formatMensaje(alerta.mensaje),
+                                        fontSize = 15.sp,
+                                        color = azulPrincipal,
+                                    )
+                                }
+
+                                IconButton(
+                                    onClick = {
+                                        dbRefAlertas.child(alerta.id).removeValue()
+                                    }
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.outline_x_circle_24), // usa un ícono “x” existente
+                                        contentDescription = "Eliminar alerta",
+                                        tint = Color.Red
+                                    )
+                                }
                             }
                         }
                     }
@@ -262,7 +231,6 @@ fun PantallaAlertas(listaAlertas: List<Alerta>, dbRefAlertas: DatabaseReference)
     }
 }
 
-// 🔹 Reutilizable para los iconos de la barra inferior (sin contador aquí)
 @Composable
 fun BottomNavItem(icon: Int, label: String, onClick: () -> Unit) {
     val azulPrincipal = Color(0xFF3F51B5)
@@ -282,7 +250,6 @@ fun BottomNavItem(icon: Int, label: String, onClick: () -> Unit) {
     }
 }
 
-
 fun formatMensaje(texto: String): String {
     val regex = Regex("""\$\d+(\.\d+)?""")
     val formatter = NumberFormat.getInstance(Locale("es", "CO"))
@@ -291,15 +258,3 @@ fun formatMensaje(texto: String): String {
         "$" + formatter.format(numero)
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-

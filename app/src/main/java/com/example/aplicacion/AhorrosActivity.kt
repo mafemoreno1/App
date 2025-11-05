@@ -67,6 +67,8 @@ fun formatToFirebaseString(number: Double): String {
 fun actualizarMontoEnFirebase(context: Context, ahorro: Ahorro, adicional: Double) {
     val user = FirebaseAuth.getInstance().currentUser ?: return
     val ref = FirebaseDatabase.getInstance().getReference("ahorros").child(user.uid).child(ahorro.id)
+    val alertasRef = FirebaseDatabase.getInstance().getReference("alertas").child(user.uid)
+
     val montoActualD = cleanToDouble(ahorro.monto)
     val nuevoMontoD = montoActualD + adicional
     val nuevoMontoStr = formatToFirebaseString(nuevoMontoD)
@@ -78,18 +80,48 @@ fun actualizarMontoEnFirebase(context: Context, ahorro: Ahorro, adicional: Doubl
     ref.updateChildren(updates)
         .addOnSuccessListener {
             Toast.makeText(context, "¡${formatToCOP(adicional)} agregados!", Toast.LENGTH_SHORT).show()
+
+            // 🔔 ALERTA: ahorro actualizado
+            val idAlerta = alertasRef.push().key
+            if (idAlerta != null) {
+                val alerta = mapOf(
+                    "id" to idAlerta,
+                    "titulo" to "Ahorro actualizado",
+                    "mensaje" to "Agregaste ${formatToCOP(adicional)} al ahorro '${ahorro.nombre}'.",
+                    "tipo" to "ahorro",
+                    "fecha" to System.currentTimeMillis(),
+                    "leida" to false
+                )
+                alertasRef.child(idAlerta).setValue(alerta)
+            }
         }
         .addOnFailureListener {
             Toast.makeText(context, "Error al actualizar: ${it.message}", Toast.LENGTH_SHORT).show()
         }
 }
 
-fun eliminarAhorro(context: Context, id: String) {
+fun eliminarAhorro(context: Context, id: String, nombre: String) {
     val user = FirebaseAuth.getInstance().currentUser ?: return
     val ref = FirebaseDatabase.getInstance().getReference("ahorros").child(user.uid).child(id)
+    val alertasRef = FirebaseDatabase.getInstance().getReference("alertas").child(user.uid)
+
     ref.removeValue()
         .addOnSuccessListener {
-            Toast.makeText(context, "Ahorro eliminado.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Ahorro '$nombre' eliminado.", Toast.LENGTH_SHORT).show()
+
+
+            val idAlerta = alertasRef.push().key
+            if (idAlerta != null) {
+                val alerta = mapOf(
+                    "id" to idAlerta,
+                    "titulo" to "Ahorro eliminado",
+                    "mensaje" to "El ahorro '$nombre' fue eliminado correctamente.",
+                    "tipo" to "ahorro",
+                    "fecha" to System.currentTimeMillis(),
+                    "leida" to false
+                )
+                alertasRef.child(idAlerta).setValue(alerta)
+            }
         }
         .addOnFailureListener {
             Toast.makeText(context, "Error al eliminar: ${it.message}", Toast.LENGTH_SHORT).show()
@@ -232,7 +264,7 @@ fun AhorrosScreen(
     ahorroToDelete?.let { ahorro ->
         DeleteConfirmationDialog(
             ahorroNombre = ahorro.nombre,
-            onConfirm = { eliminarAhorro(context, ahorro.id); ahorroToDelete = null },
+            onConfirm = { eliminarAhorro(context, ahorro.id, ahorro.nombre); ahorroToDelete = null },
             onDismiss = { ahorroToDelete = null }
         )
     }
@@ -398,6 +430,7 @@ fun BottomBar(
         }
     }
 }
+
 
 
 
