@@ -42,7 +42,7 @@ import java.util.*
 class EditarPerfil : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        //Alertas.iniciarFirebase(this)
+
 
         setContent { EditarPerfilScreen() }
     }

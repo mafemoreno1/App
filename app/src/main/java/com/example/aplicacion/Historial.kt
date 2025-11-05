@@ -25,15 +25,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.*
 import kotlinx.parcelize.Parcelize
 import java.text.DecimalFormat
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.*
 
 fun formatMonto(monto: Double): String {
     val formatter = DecimalFormat("#,###")
@@ -47,7 +43,6 @@ fun formatMonto(monto: Double): String {
 
 fun formatFecha(fechaString: String): String {
     return try {
-
         val inputFormat = SimpleDateFormat("d/M/yyyy", Locale.getDefault())
         val date = inputFormat.parse(fechaString)
         val outputFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
@@ -55,6 +50,30 @@ fun formatFecha(fechaString: String): String {
     } catch (e: Exception) {
         fechaString
     }
+}
+
+
+fun millisToFechaString(millis: Long): String {
+    return try {
+        val out = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+        out.format(Date(millis))
+    } catch (e: Exception) {
+        "N/A"
+    }
+}
+
+
+fun parseFechaToMillis(fecha: String): Long {
+    val patrones = listOf("d/M/yyyy", "dd/MM/yyyy")
+    for (p in patrones) {
+        try {
+            val f = SimpleDateFormat(p, Locale.getDefault())
+            f.isLenient = false
+            val d = f.parse(fecha)
+            if (d != null) return d.time
+        } catch (_: Exception) {}
+    }
+    return 0L
 }
 
 @Parcelize
@@ -67,11 +86,9 @@ data class Registro(
     var tipo: String = ""
 ) : Parcelable
 
-
 class Historial : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
 
         val navegarA: (cls: Class<*>) -> Unit = { cls ->
             val intent = Intent(this, cls)
@@ -83,7 +100,7 @@ class Historial : ComponentActivity() {
             HistorialScreen(
                 onInicioClick = { navegarA(Inicio::class.java) },
                 onAlertasClick = { navegarA(AlertasActivity::class.java) },
-                onMetasClick = { /* Lógica de metas */  },
+                onMetasClick = { },
                 onAsistenteClick = { }
             )
         }
@@ -110,13 +127,11 @@ fun HistorialScreen(
     var showDeleteDialog by remember { mutableStateOf<Registro?>(null) }
     var showUpdateMontoDialog by remember { mutableStateOf<Registro?>(null) }
 
-
     val reloadRegistros: () -> Unit = {
         estaCargando = true
         cargarRegistros(
             onSuccess = { loadedRegistros ->
-                // NOTA: La ordenación por String de fecha (d/M/yyyy) puede ser inexacta
-                registros = loadedRegistros.sortedByDescending { it.fecha }
+                registros = loadedRegistros.sortedByDescending { parseFechaToMillis(it.fecha) }
                 estaCargando = false
             },
             onError = { error ->
@@ -127,25 +142,28 @@ fun HistorialScreen(
         )
     }
 
-    LaunchedEffect(Unit) {
-        reloadRegistros()
-    }
+    LaunchedEffect(Unit) { reloadRegistros() }
 
     val filteredRegistros = remember(registros, selectedTab) {
         registros.filter { it.tipo == selectedTab }
     }
 
-
     Scaffold(
-        bottomBar = { HistorialBottomNavigationBar(
-            colorPrincipal = azulPrincipal,
-            onInicioClick = onInicioClick,
-            onAlertasClick = onAlertasClick,
-            onMetasClick = onMetasClick,
-            onAsistenteClick = onAsistenteClick
-        ) }
+        bottomBar = {
+            HistorialBottomNavigationBar(
+                colorPrincipal = azulPrincipal,
+                onInicioClick = onInicioClick,
+                onAlertasClick = onAlertasClick,
+                onMetasClick = onMetasClick,
+                onAsistenteClick = onAsistenteClick
+            )
+        }
     ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
 
             IconButton(
                 onClick = {
@@ -202,7 +220,6 @@ fun HistorialScreen(
                     )
                 }
                 Spacer(modifier = Modifier.height(20.dp))
-
 
                 if (estaCargando && registros.isEmpty()) {
                     CircularProgressIndicator(modifier = Modifier.padding(20.dp), color = azulPrincipal)
@@ -355,14 +372,18 @@ fun RegistroCard(
                         painter = painterResource(id = R.drawable.outline_add_circle_24),
                         contentDescription = "Agregar",
                         tint = colorAzul,
-                        modifier = Modifier.size(24.dp).clickable { onSumarMonto(registro) }
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable { onSumarMonto(registro) }
                     )
 
                     Icon(
                         painter = painterResource(id = R.drawable.outline_x_circle_24),
                         contentDescription = "Eliminar",
                         tint = Color.Red,
-                        modifier = Modifier.size(24.dp).clickable { onEliminar(registro) }
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable { onEliminar(registro) }
                     )
                 }
             }
@@ -498,6 +519,10 @@ fun HistorialBottomNavigationBar(
     }
 }
 
+/* =====================
+   BASE DE DATOS + ALERTAS
+   ===================== */
+
 fun actualizarMontoRegistro(
     context: android.content.Context,
     registro: Registro,
@@ -517,13 +542,29 @@ fun actualizarMontoRegistro(
 
     ref.child("monto").addListenerForSingleValueEvent(object : ValueEventListener {
         override fun onDataChange(snapshot: DataSnapshot) {
-
-            val montoActual = snapshot.getValue(Double::class.java) ?: registro.monto
+            val montoActual = when (val v = snapshot.value) {
+                is Number -> v.toDouble()
+                is String -> v.toDoubleOrNull() ?: registro.monto
+                else -> registro.monto
+            }
             val nuevoMonto = montoActual + montoAdicional
 
             ref.child("monto").setValue(nuevoMonto)
                 .addOnSuccessListener {
-                    Toast.makeText(context, "Monto de '${registro.nombre}' actualizado con éxito.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        context,
+                        "Monto de '${registro.nombre}' actualizado con éxito.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+
+                    Alertas.mostrarAlerta(
+                        context = context,
+                        titulo = "Monto ${registro.tipo.lowercase()} actualizado",
+                        mensaje = "Se sumó ${formatMonto(montoAdicional)} a '${registro.nombre}'. Nuevo total: ${formatMonto(nuevoMonto)}.",
+                        tipo = "actualizacion"
+                    )
+
                     onComplete()
                 }
                 .addOnFailureListener { e ->
@@ -532,10 +573,11 @@ fun actualizarMontoRegistro(
         }
 
         override fun onCancelled(error: DatabaseError) {
-            Toast.makeText(context, "Fallo la lectura del monto actual: ${error.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Falló la lectura del monto actual: ${error.message}", Toast.LENGTH_LONG).show()
         }
     })
 }
+
 
 fun cargarRegistros(
     onSuccess: (List<Registro>) -> Unit,
@@ -550,23 +592,37 @@ fun cargarRegistros(
     val uid = user.uid
     val database = FirebaseDatabase.getInstance()
     val registros = mutableListOf<Registro>()
-    val tipos = listOf("ingresos", "gastos")
 
+    val tipos = listOf("ingresos", "gastos")
     var consultasPendientes = tipos.size
 
     tipos.forEach { tipo ->
-
         val ref = database.getReference(tipo).child(uid)
-
         ref.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 snapshot.children.mapNotNullTo(registros) { registroSnapshot ->
                     try {
+                        // Normalización de tipos para evitar crash
+                        val fechaValue = registroSnapshot.child("fecha").value
+                        val fechaStr = when (fechaValue) {
+                            is Long -> millisToFechaString(fechaValue)
+                            is Number -> millisToFechaString(fechaValue.toLong())
+                            is String -> fechaValue
+                            else -> "N/A"
+                        }
+
+                        val montoValue = registroSnapshot.child("monto").value
+                        val montoDouble = when (montoValue) {
+                            is Number -> montoValue.toDouble()
+                            is String -> montoValue.toDoubleOrNull() ?: 0.0
+                            else -> 0.0
+                        }
+
                         Registro(
                             id = registroSnapshot.key ?: "",
                             nombre = registroSnapshot.child("nombre").getValue(String::class.java) ?: "Sin Nombre",
-                            fecha = registroSnapshot.child("fecha").getValue(String::class.java) ?: "N/A",
-                            monto = registroSnapshot.child("monto").getValue(Double::class.java) ?: 0.0,
+                            fecha = fechaStr,
+                            monto = montoDouble,
                             categoria = registroSnapshot.child("categoria").getValue(String::class.java) ?: "Sin Categoría",
                             tipo = if (tipo == "ingresos") "Ingreso" else "Gasto"
                         )
@@ -578,7 +634,7 @@ fun cargarRegistros(
 
                 consultasPendientes--
                 if (consultasPendientes == 0) {
-                    onSuccess(registros.sortedByDescending { it.fecha })
+                    onSuccess(registros.sortedByDescending { parseFechaToMillis(it.fecha) })
                 }
             }
 
@@ -587,7 +643,7 @@ fun cargarRegistros(
                 if (consultasPendientes == 0) {
                     onSuccess(registros)
                 }
-                onError("Fallo la lectura de $tipo: ${error.message}")
+                onError("Falló la lectura de $tipo: ${error.message}")
             }
         })
     }
@@ -606,7 +662,6 @@ fun eliminarRegistro(
 
     val uid = user.uid
     val database = FirebaseDatabase.getInstance()
-
     val refPath = if (registro.tipo == "Ingreso") "ingresos" else "gastos"
     val ref = database.getReference(refPath).child(uid).child(registro.id)
 
@@ -614,19 +669,13 @@ fun eliminarRegistro(
         .addOnSuccessListener {
             Toast.makeText(context, "${registro.tipo} '${registro.nombre}' eliminado", Toast.LENGTH_SHORT).show()
 
-            val alertasRef = database.getReference("alertas").child(uid)
-            alertasRef.orderByChild("idRegistro").equalTo(registro.id)
-                .addListenerForSingleValueEvent(object : ValueEventListener {
-                    override fun onDataChange(snapshot: DataSnapshot) {
-                        for (alertaSnapshot in snapshot.children) {
-                            alertaSnapshot.ref.removeValue()
-                        }
-                    }
 
-                    override fun onCancelled(error: DatabaseError) {
-                        Toast.makeText(context, "Error al eliminar alerta: ${error.message}", Toast.LENGTH_SHORT).show()
-                    }
-                })
+            Alertas.mostrarAlerta(
+                context = context,
+                titulo = "Registro eliminado",
+                mensaje = "Se eliminó un ${registro.tipo.lowercase()} llamado '${registro.nombre}'.",
+                tipo = "eliminacion"
+            )
 
             onComplete()
         }
@@ -634,8 +683,6 @@ fun eliminarRegistro(
             Toast.makeText(context, "Error al eliminar: ${it.message}", Toast.LENGTH_SHORT).show()
         }
 }
-
-
 
 
 

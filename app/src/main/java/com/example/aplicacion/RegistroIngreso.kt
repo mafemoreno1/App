@@ -46,7 +46,7 @@ fun RegistroIngresoScreen() {
     var monto by remember { mutableStateOf("") }
     var fecha by remember { mutableStateOf("") }
 
-    val categoriasIngreso = listOf("Salario", "Inversión", "Venta", "Regalo", "Otro")
+    val categoriasIngreso = listOf("Salario", "Ventas", "Inversiones", "Regalo", "Otro")
     var categoriaSeleccionada by remember { mutableStateOf(categoriasIngreso.first()) }
     var categoriaExpandida by remember { mutableStateOf(false) }
 
@@ -67,7 +67,7 @@ fun RegistroIngresoScreen() {
     )
 
     Scaffold(
-        bottomBar = { IngresoBottomNavigationBar(azulPrincipal) }
+        bottomBar = { IngresosBottomNavigationBar(azulPrincipal) }
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -106,8 +106,8 @@ fun RegistroIngresoScreen() {
 
                 Spacer(modifier = Modifier.height(30.dp))
 
-                CampoTextoPersonalizadoIngreso(
-                    label = "Nombre Ingreso",
+                CampoTextoIngreso(
+                    label = "Nombre del Ingreso",
                     valor = nombreIngreso,
                     onChange = { nombreIngreso = it },
                     azul = azulPrincipal,
@@ -118,7 +118,7 @@ fun RegistroIngresoScreen() {
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                CampoTextoPersonalizadoIngreso(
+                CampoTextoIngreso(
                     label = "Monto",
                     valor = monto,
                     onChange = { monto = it.replace(',', '.') },
@@ -131,6 +131,7 @@ fun RegistroIngresoScreen() {
 
                 Spacer(modifier = Modifier.height(20.dp))
 
+                // Categoría
                 ExposedDropdownMenuBox(
                     expanded = categoriaExpandida,
                     onExpandedChange = { categoriaExpandida = !categoriaExpandida },
@@ -150,11 +151,12 @@ fun RegistroIngresoScreen() {
                             readOnly = true,
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoriaExpandida) },
                             modifier = Modifier.menuAnchor().fillMaxWidth(),
-                            colors = TextFieldDefaults.textFieldColors(
-                                containerColor = fondoCampo,
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = fondoCampo,
+                                unfocusedContainerColor = fondoCampo,
+                                disabledContainerColor = fondoCampo,
                                 focusedIndicatorColor = Color.Transparent,
                                 unfocusedIndicatorColor = Color.Transparent,
-                                disabledTextColor = azulPrincipal,
                                 disabledIndicatorColor = Color.Transparent
                             ),
                             shape = RoundedCornerShape(8.dp),
@@ -180,6 +182,7 @@ fun RegistroIngresoScreen() {
 
                 Spacer(modifier = Modifier.height(20.dp))
 
+                // Fecha
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = "Fecha",
@@ -197,11 +200,13 @@ fun RegistroIngresoScreen() {
                             .clickable { datePickerDialog.show() },
                         enabled = false,
                         textStyle = TextStyle(color = azulPrincipal),
-                        colors = TextFieldDefaults.textFieldColors(
-                            containerColor = fondoCampo,
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = fondoCampo,
+                            unfocusedContainerColor = fondoCampo,
+                            disabledContainerColor = fondoCampo,
+                            disabledTextColor = azulPrincipal,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
-                            disabledTextColor = azulPrincipal,
                             disabledIndicatorColor = Color.Transparent
                         ),
                         shape = RoundedCornerShape(8.dp)
@@ -213,13 +218,7 @@ fun RegistroIngresoScreen() {
                 Button(
                     onClick = {
                         if (nombreIngreso.isNotEmpty() && monto.isNotEmpty() && fecha.isNotEmpty()) {
-                            guardarIngresoYAlerta(
-                                context,
-                                nombreIngreso,
-                                monto,
-                                fecha,
-                                categoriaSeleccionada
-                            )
+                            guardarIngreso(context, nombreIngreso, monto, fecha, categoriaSeleccionada)
                         } else {
                             Toast.makeText(context, "Completa todos los campos", Toast.LENGTH_SHORT).show()
                         }
@@ -237,7 +236,7 @@ fun RegistroIngresoScreen() {
     }
 }
 
-fun guardarIngresoYAlerta(
+fun guardarIngreso(
     context: android.content.Context,
     nombre: String,
     monto: String,
@@ -245,60 +244,59 @@ fun guardarIngresoYAlerta(
     categoria: String
 ) {
     val user = FirebaseAuth.getInstance().currentUser
-    if (user == null) {
-        Toast.makeText(context, "Inicia sesión para guardar ingresos", Toast.LENGTH_SHORT).show()
-        return
-    }
+    if (user != null) {
+        val uid = user.uid
+        val database = FirebaseDatabase.getInstance()
+        val ingresosRef = database.getReference("ingresos").child(uid)
+        val alertasRef = database.getReference("alertas").child(uid)
 
-    val uid = user.uid
-    val database = FirebaseDatabase.getInstance()
-    val ingresosRef = database.getReference("ingresos").child(uid)
-    val alertasRef = database.getReference("alertas").child(uid)
+        val montoDouble = monto.toDoubleOrNull()
+        if (montoDouble == null) {
+            Toast.makeText(context, "Monto no válido", Toast.LENGTH_SHORT).show()
+            return
+        }
 
-    val montoDouble = monto.replace(',', '.').toDoubleOrNull()
-    if (montoDouble == null) {
-        Toast.makeText(context, "Monto no válido. Usa números.", Toast.LENGTH_SHORT).show()
-        return
-    }
-
-    val idIngreso = ingresosRef.push().key ?: return
-    val ingreso = mapOf(
-        "id" to idIngreso,
-        "nombre" to nombre,
-        "monto" to montoDouble,
-        "fecha" to fecha,
-        "categoria" to categoria,
-        "tipo" to "Ingreso",
-        "uidUsuario" to uid
-    )
-
-    ingresosRef.child(idIngreso).setValue(ingreso)
-        .addOnSuccessListener {
-            // ✅ Crear alerta en la carpeta del usuario
-            val idAlerta = alertasRef.push().key ?: return@addOnSuccessListener
-            val alerta = mapOf(
-                "id" to idAlerta,
-                "uid" to uid,
-                "titulo" to "Nuevo ingreso registrado",
-                "mensaje" to "Has registrado un ingreso de $$montoDouble en la categoría $categoria.",
-                "tipo" to "ingreso",
-                "fecha" to System.currentTimeMillis(),
-                "leida" to false
+        val idIngreso = ingresosRef.push().key
+        if (idIngreso != null) {
+            val ingreso = mapOf(
+                "id" to idIngreso,
+                "nombre" to nombre,
+                "monto" to montoDouble,
+                "fecha" to fecha,
+                "categoria" to categoria,
+                "tipo" to "Ingreso",
+                "uidUsuario" to uid
             )
-            alertasRef.child(idAlerta).setValue(alerta)
 
-            Toast.makeText(context, "Ingreso guardado correctamente", Toast.LENGTH_SHORT).show()
-            context.startActivity(Intent(context, Historial::class.java))
-            (context as? ComponentActivity)?.finish()
+            ingresosRef.child(idIngreso).setValue(ingreso)
+                .addOnSuccessListener {
+                    val idAlerta = alertasRef.push().key ?: return@addOnSuccessListener
+                    val alerta = mapOf(
+                        "id" to idAlerta,
+                        "titulo" to "Nuevo Ingreso",
+                        "mensaje" to "Has registrado un ingreso de $$montoDouble en $categoria.",
+                        "tipo" to "ingreso",
+                        "fecha" to System.currentTimeMillis(),
+                        "leida" to false
+                    )
+                    alertasRef.child(idAlerta).setValue(alerta)
+
+                    Toast.makeText(context, "Ingreso guardado exitosamente", Toast.LENGTH_SHORT).show()
+                    context.startActivity(Intent(context, Historial::class.java))
+                    (context as? ComponentActivity)?.finish()
+                }
+                .addOnFailureListener {
+                    Toast.makeText(context, "Error al guardar: ${it.message}", Toast.LENGTH_SHORT).show()
+                }
         }
-        .addOnFailureListener {
-            Toast.makeText(context, "Error al guardar ingreso: ${it.message}", Toast.LENGTH_SHORT).show()
-        }
+    } else {
+        Toast.makeText(context, "Inicia sesión para guardar ingresos", Toast.LENGTH_SHORT).show()
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CampoTextoPersonalizadoIngreso(
+fun CampoTextoIngreso(
     label: String,
     valor: String,
     onChange: (String) -> Unit,
@@ -309,12 +307,7 @@ fun CampoTextoPersonalizadoIngreso(
     onNext: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = label,
-            color = azul,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold
-        )
+        Text(text = label, color = azul, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         Spacer(modifier = Modifier.height(6.dp))
         TextField(
             value = valor,
@@ -323,11 +316,11 @@ fun CampoTextoPersonalizadoIngreso(
             keyboardOptions = KeyboardOptions(keyboardType = tipo, imeAction = imeAction),
             keyboardActions = KeyboardActions(onNext = { onNext() }),
             modifier = Modifier.fillMaxWidth(),
-            colors = TextFieldDefaults.textFieldColors(
-                containerColor = fondo,
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = fondo,
+                unfocusedContainerColor = fondo,
                 focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                cursorColor = azul
+                unfocusedIndicatorColor = Color.Transparent
             ),
             shape = RoundedCornerShape(8.dp)
         )
@@ -335,10 +328,9 @@ fun CampoTextoPersonalizadoIngreso(
 }
 
 @Composable
-fun IngresoBottomNavigationBar(colorPrincipal: Color) {
+fun IngresosBottomNavigationBar(colorPrincipal: Color) {
     val context = LocalContext.current
-
-    val navegarA: (cls: Class<*>) -> Unit = { cls ->
+    val navegarA: (Class<*>) -> Unit = { cls ->
         val intent = Intent(context, cls)
         intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
         context.startActivity(intent)

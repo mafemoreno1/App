@@ -10,15 +10,23 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Aplicacion">
+        <activity android:name=".Metas"
+            android:exported="true"
+            android:label="Metas"
+            android:theme="@style/Theme.Aplicacion"/>
         <activity
             android:name=".AlertasActivity"
             android:exported="true"
-            android:label="@string/title_activity_registro_ingreso"
+            android:label="Alertas"
             android:theme="@style/Theme.Aplicacion" />
+        <activity android:name=".EditarPerfil"
+            android:exported="true"
+            android:label="EditarPerfil"
+            android:theme="@style/Theme.Aplicacion"/>
         <activity
             android:name=".Perfil"
             android:exported="true"
-            android:label="@string/title_activity_registro_ingreso"
+            android:label="Perfil"
             android:theme="@style/Theme.Aplicacion" />
         <activity
             android:name=".RegistroIngreso"
@@ -33,17 +41,17 @@
         <activity
             android:name=".Historial"
             android:exported="true"
-            android:label="@string/title_activity_ingresos"
+            android:label="Historial"
             android:theme="@style/Theme.Aplicacion" />
         <activity
             android:name=".AgregarAhorroActivity"
             android:exported="true"
-            android:label="@string/title_activity_contraseña"
+            android:label="AgregarAhorro"
             android:theme="@style/Theme.Aplicacion" />
         <activity
             android:name=".AhorrosActivity"
             android:exported="true"
-            android:label="@string/title_activity_contraseña"
+            android:label="Ahorros"
             android:theme="@style/Theme.Aplicacion" />
         <activity
             android:name=".Contraseña"

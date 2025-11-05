@@ -106,7 +106,7 @@ fun RegistroGastoScreen() {
 
                 Spacer(modifier = Modifier.height(30.dp))
 
-                // Campo nombre del gasto
+                // Nombre del gasto
                 CampoTextoPersonalizado(
                     label = "Nombre del Gasto",
                     valor = nombreGasto,
@@ -119,7 +119,7 @@ fun RegistroGastoScreen() {
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Campo monto
+                // Monto
                 CampoTextoPersonalizado(
                     label = "Monto",
                     valor = monto,
@@ -133,7 +133,7 @@ fun RegistroGastoScreen() {
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Categoría
+                // Categoría (ExposedDropdown)
                 ExposedDropdownMenuBox(
                     expanded = categoriaExpandida,
                     onExpandedChange = { categoriaExpandida = !categoriaExpandida },
@@ -152,11 +152,16 @@ fun RegistroGastoScreen() {
                             onValueChange = {},
                             readOnly = true,
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoriaExpandida) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth(),
-                            colors = TextFieldDefaults.textFieldColors(
-                                containerColor = fondoCampo,
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth(),
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = fondoCampo,
+                                unfocusedContainerColor = fondoCampo,
+                                disabledContainerColor = fondoCampo,
                                 focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent
+                                unfocusedIndicatorColor = Color.Transparent,
+                                disabledIndicatorColor = Color.Transparent
                             ),
                             shape = RoundedCornerShape(8.dp),
                             textStyle = TextStyle(color = azulPrincipal)
@@ -181,7 +186,7 @@ fun RegistroGastoScreen() {
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-
+                // Fecha
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = "Fecha",
@@ -199,11 +204,13 @@ fun RegistroGastoScreen() {
                             .clickable { datePickerDialog.show() },
                         enabled = false,
                         textStyle = TextStyle(color = azulPrincipal),
-                        colors = TextFieldDefaults.textFieldColors(
-                            containerColor = fondoCampo,
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = fondoCampo,
+                            unfocusedContainerColor = fondoCampo,
+                            disabledContainerColor = fondoCampo,
+                            disabledTextColor = azulPrincipal,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
-                            disabledTextColor = azulPrincipal,
                             disabledIndicatorColor = Color.Transparent
                         ),
                         shape = RoundedCornerShape(8.dp)
@@ -273,7 +280,7 @@ fun guardarGasto(
 
             gastosRef.child(idGasto).setValue(gasto)
                 .addOnSuccessListener {
-                    // 🔔 Guardar alerta personalizada dentro del nodo del usuario
+                    // Guardar alerta personalizada dentro del nodo del usuario
                     val idAlerta = alertasRef.push().key ?: return@addOnSuccessListener
                     val alerta = mapOf(
                         "id" to idAlerta,
@@ -320,8 +327,9 @@ fun CampoTextoPersonalizado(
             keyboardOptions = KeyboardOptions(keyboardType = tipo, imeAction = imeAction),
             keyboardActions = KeyboardActions(onNext = { onNext() }),
             modifier = Modifier.fillMaxWidth(),
-            colors = TextFieldDefaults.textFieldColors(
-                containerColor = fondo,
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = fondo,
+                unfocusedContainerColor = fondo,
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent
             ),

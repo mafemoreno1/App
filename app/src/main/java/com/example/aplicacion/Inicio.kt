@@ -244,7 +244,7 @@ fun PantallaInicio() {
             ItemBarraInferior(
                 icon = R.drawable.outline_home_24,
                 texto = "Inicio",
-                onClick = { /* Ya estás en Inicio */ }
+                onClick = { }
             )
 
             ItemBarraInferior(
@@ -278,7 +278,7 @@ fun PantallaInicio() {
             ItemBarraInferior(
                 icon = R.drawable.outline_assignment_turned_in_24,
                 texto = "Metas",
-                onClick = { /* Próxima funcionalidad */ }
+                onClick = { context.startActivity(Intent(context, Metas::class.java)) }
             )
 
             ItemBarraInferior(
