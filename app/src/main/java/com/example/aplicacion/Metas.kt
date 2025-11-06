@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -66,9 +68,9 @@ data class MarketRow(
 fun MetasScreen() {
     val context = LocalContext.current
     val azulPrincipal = Color(0xFF3F51B5)
-    val fondo = Color(0xFFF2F2F2)
     val verde = Color(0xFF00C853)
     val rojo = Color(0xFFD50000)
+    val fondo = Color.White
 
     val symbols = listOf(
         Pair("S&P 500", "SPX"),
@@ -100,8 +102,6 @@ fun MetasScreen() {
         .build()
 
     val api = retrofit.create(TwelveDataApi::class.java)
-
-    // 🔑 Tu API Key personal (segura)
     val apiKey = "50c95f2eeda3498f8621c8fd6e70c7ee"
 
     suspend fun fetchAll(): List<MarketRow> = withContext(Dispatchers.IO) {
@@ -123,7 +123,9 @@ fun MetasScreen() {
         deferreds.awaitAll()
     }
 
-    fun actualizarDatosOnce(scope: CoroutineScope) {
+    val scope = rememberCoroutineScope()
+
+    fun actualizarDatosOnce() {
         scope.launch {
             cargando = true
             errorMsg = null
@@ -135,7 +137,7 @@ fun MetasScreen() {
                 consejo = when {
                     cambioUsdCop > 0.3 -> "El dólar sube — podrías vender."
                     cambioUsdCop < -0.3 -> "El dólar bajó — buena oportunidad para comprar."
-                    else -> " El mercado está estable — mantén tu inversión."
+                    else -> "El mercado está estable — mantén tu inversión."
                 }
 
                 rows = lista
@@ -147,109 +149,118 @@ fun MetasScreen() {
         }
     }
 
-    val scope = rememberCoroutineScope()
-
-
     LaunchedEffect(Unit) {
-        actualizarDatosOnce(scope)
+        actualizarDatosOnce()
         while (true) {
             delay(30_000L)
-            actualizarDatosOnce(scope)
+            actualizarDatosOnce()
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Metas - Mercados", color = Color.White) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = azulPrincipal)
-            )
-        },
-        containerColor = fondo
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .background(fondo)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(fondo)
+            .padding(horizontal = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        item {
+            Spacer(modifier = Modifier.height(32.dp)) // espacio superior
+
+            // Cabecera con flecha y título
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_arrow_back),
+                    contentDescription = "Volver",
+                    tint = azulPrincipal,
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clickable { context.startActivity(Intent(context, Inicio::class.java)) }
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = "Metas - Mercados",
+                    color = azulPrincipal,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Subtítulo
             Text(
                 text = "Mercados & Divisas (tiempo real)",
                 fontSize = 20.sp,
                 color = azulPrincipal,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+        }
 
+        // Card de encabezados
+        item {
             Card(
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 modifier = Modifier.fillMaxWidth(),
                 elevation = CardDefaults.cardElevation(6.dp)
             ) {
-                Column(Modifier.padding(12.dp)) {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Activo", fontWeight = FontWeight.Bold)
-                        Text("Precio", fontWeight = FontWeight.Bold, textAlign = TextAlign.End)
-                        Text("Cambio", fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
-                    }
-                    Divider(Modifier.padding(vertical = 8.dp))
-
-                    if (cargando && rows.isEmpty()) {
-                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = azulPrincipal)
-                        }
-                    } else {
-                        LazyColumn {
-                            items(rows) { r ->
-                                Row(
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 8.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(r.displayName, fontWeight = FontWeight.Medium, color = Color(0xFF2C2C54))
-                                        Text(r.symbol, fontSize = 12.sp, color = Color(0xFF7E7E7E))
-                                    }
-
-                                    Text(
-                                        text = r.price ?: "--",
-                                        modifier = Modifier.widthIn(min = 90.dp),
-                                        textAlign = TextAlign.End,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-
-                                    val changeVal = r.change?.toDoubleOrNull()
-                                    val changeText = r.change?.let {
-                                        if (it.startsWith("-")) it else if (!it.startsWith("+")) "+$it" else it
-                                    } ?: "--"
-                                    Text(
-                                        text = changeText,
-                                        color = when {
-                                            changeVal == null -> Color(0xFF7E7E7E)
-                                            changeVal > 0 -> verde
-                                            changeVal < 0 -> rojo
-                                            else -> Color(0xFF7E7E7E)
-                                        },
-                                        modifier = Modifier.padding(start = 12.dp)
-                                    )
-                                }
-                                Divider(color = Color(0xFFE0E0E0))
-                            }
-                        }
-                    }
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Activo", fontWeight = FontWeight.Bold, modifier = Modifier.weight(2f))
+                    Text("Precio", fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
+                    Text("Cambio", fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.weight(1f))
                 }
             }
+        }
 
-            Spacer(modifier = Modifier.height(12.dp))
+        // Items de mercados
+        items(rows) { r ->
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(r.displayName, fontWeight = FontWeight.Medium, color = Color(0xFF2C2C54), modifier = Modifier.weight(2f))
+                Text(r.price ?: "--", textAlign = TextAlign.End, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                val changeVal = r.change?.toDoubleOrNull()
+                val changeText = r.change?.let {
+                    if (it.startsWith("-")) it else if (!it.startsWith("+")) "+$it" else it
+                } ?: "--"
+                Text(
+                    text = changeText,
+                    textAlign = TextAlign.End,
+                    color = when {
+                        changeVal == null -> Color(0xFF7E7E7E)
+                        changeVal > 0 -> verde
+                        changeVal < 0 -> rojo
+                        else -> Color(0xFF7E7E7E)
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Divider(color = Color(0xFFE0E0E0))
+        }
 
+        item {
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Card de consejo
             Card(
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 modifier = Modifier.fillMaxWidth(),
@@ -264,22 +275,25 @@ fun MetasScreen() {
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = { actualizarDatosOnce(scope) }, colors = ButtonDefaults.buttonColors(containerColor = azulPrincipal)) {
-                    Text(text = "Actualizar ahora", color = Color.White)
-                }
-                OutlinedButton(onClick = {
-                    try {
-                        context.startActivity(Intent(context, Inicio::class.java))
-                    } catch (_: Exception) { }
-                }) {
-                    Text("Volver", color = azulPrincipal)
-                }
+            // Botón centrado
+            Button(
+                onClick = { actualizarDatosOnce() },
+                colors = ButtonDefaults.buttonColors(containerColor = azulPrincipal),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp)
+            ) {
+                Text(text = "Actualizar ahora", color = Color.White)
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
+
+
+
+
+

@@ -58,7 +58,7 @@ class Finanzas : ComponentActivity() {
                 onHistorialClick = { navegarA(Historial::class.java) },
                 onInicioClick = { navegarA(Inicio::class.java) },
                 onAlertasClick = { navegarA(AlertasActivity::class.java) },
-                onMetasClick = { },
+                onMetasClick = { navegarA(Metas::class.java)},
                 onAsistenteClick = { },
 
                 auth = auth,

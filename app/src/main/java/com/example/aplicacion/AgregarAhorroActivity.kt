@@ -79,7 +79,7 @@ fun AgregarAhorroScreen() {
             BottomBarAgregarAhorro(
                 onInicioClick = { context.startActivity(Intent(context, Inicio::class.java)) },
                 onAlertasClick = { context.startActivity(Intent(context, AlertasActivity::class.java)) },
-                onMetasClick = { },
+                onMetasClick = { context.startActivity(Intent(context, Metas::class.java))},
                 onAsistenteClick = {}
             )
         }
@@ -155,7 +155,7 @@ fun AgregarAhorroScreen() {
 
                     ref.child(ahorroId).setValue(ahorro)
                         .addOnSuccessListener {
-                            // 🔔 ALERTA: nuevo ahorro registrado
+
                             val alertasRef = FirebaseDatabase.getInstance()
                                 .getReference("alertas")
                                 .child(user.uid)

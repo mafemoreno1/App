@@ -340,7 +340,7 @@ fun IngresosBottomNavigationBar(colorPrincipal: Color) {
     val iconosYAcciones = listOf(
         Pair(R.drawable.outline_home_24, Pair("Inicio", { navegarA(Inicio::class.java) })),
         Pair(R.drawable.outline_notifications_24, Pair("Alertas", { navegarA(AlertasActivity::class.java) })),
-        Pair(R.drawable.outline_assignment_turned_in_24, Pair("Metas", { })),
+        Pair(R.drawable.outline_assignment_turned_in_24, Pair("Metas", {navegarA(Metas::class.java) })),
         Pair(R.drawable.outline_person_24, Pair("Asistente IA", { }))
     )
 

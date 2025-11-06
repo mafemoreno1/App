@@ -81,7 +81,7 @@ fun actualizarMontoEnFirebase(context: Context, ahorro: Ahorro, adicional: Doubl
         .addOnSuccessListener {
             Toast.makeText(context, "¡${formatToCOP(adicional)} agregados!", Toast.LENGTH_SHORT).show()
 
-            // 🔔 ALERTA: ahorro actualizado
+
             val idAlerta = alertasRef.push().key
             if (idAlerta != null) {
                 val alerta = mapOf(
@@ -140,7 +140,7 @@ class AhorrosActivity : ComponentActivity() {
                 onAgregarClick = { startActivity(Intent(this, AgregarAhorroActivity::class.java)) },
                 onInicioClick = { startActivity(Intent(this, Inicio::class.java)) },
                 onAlertasClick = {startActivity(Intent(this, AlertasActivity::class.java)) },
-                onMetasClick = {  },
+                onMetasClick = { startActivity(Intent(this, Metas::class.java)) },
                 onAsistenteClick = {}
             )
         }

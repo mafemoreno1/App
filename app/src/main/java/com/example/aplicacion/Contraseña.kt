@@ -85,15 +85,17 @@ fun ForgotPasswordScreen() {
                     .fillMaxWidth()
                     .height(82.dp)
                     .padding(bottom = 28.dp),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    containerColor = Color.White,
-                    focusedBorderColor = Color(0xFF3F51B5),
-                    unfocusedBorderColor = Color(0xFF3F51B5),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedIndicatorColor = Color(0xFF3F51B5),
+                    unfocusedIndicatorColor = Color(0xFF3F51B5),
                     cursorColor = Color(0xFF3F51B5)
                 ),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 shape = RoundedCornerShape(16.dp)
             )
+
 
             Button(
                 onClick = {

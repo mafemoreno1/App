@@ -150,7 +150,7 @@ fun RegisterScreen() {
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3F51B5))
             ) {
                 Text(
-                    text = "Resgistrarse",
+                    text = "Registrarse",
                     color = Color.White,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
@@ -180,11 +180,14 @@ fun CampoTexto(
             .height(70.dp)
             .padding(bottom = 16.dp),
         textStyle = LocalTextStyle.current.copy(color = Color(0xFF3F51B5)),
-        colors = TextFieldDefaults.outlinedTextFieldColors(
-            containerColor = Color.White,
-            focusedBorderColor = Color(0xFF3F51B5),
-            unfocusedBorderColor = Color(0xFF3F51B5),
-            cursorColor = Color(0xFF3F51B5)
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = Color.White,
+            unfocusedContainerColor = Color.White,
+            focusedIndicatorColor = Color(0xFF3F51B5),
+            unfocusedIndicatorColor = Color(0xFF3F51B5),
+            cursorColor = Color(0xFF3F51B5),
+            focusedTextColor = Color(0xFF3F51B5),
+            unfocusedTextColor = Color(0xFF3F51B5)
         ),
         keyboardOptions = KeyboardOptions(keyboardType = tipo),
         shape = RoundedCornerShape(14.dp)

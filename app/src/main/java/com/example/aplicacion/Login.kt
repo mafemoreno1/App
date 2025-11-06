@@ -93,17 +93,19 @@ fun LoginScreen(auth: FirebaseAuth) {
                     .height(66.dp)
                     .padding(bottom = 16.dp),
                 shape = RoundedCornerShape(14.dp),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedTextColor = Color(0xFF3F51B5),
-                    unfocusedTextColor = Color(0xFF3F51B5),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedIndicatorColor = Color(0xFF3F51B5),
+                    unfocusedIndicatorColor = Color(0xFF3F51B5),
                     cursorColor = Color(0xFF3F51B5),
-                    focusedBorderColor = Color(0xFF3F51B5),
-                    unfocusedBorderColor = Color(0xFF3F51B5)
+                    focusedTextColor = Color(0xFF3F51B5),
+                    unfocusedTextColor = Color(0xFF3F51B5)
                 ),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
             )
 
-
+            // Campo de contraseña
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
@@ -115,12 +117,14 @@ fun LoginScreen(auth: FirebaseAuth) {
                     .height(66.dp)
                     .padding(bottom = 16.dp),
                 shape = RoundedCornerShape(14.dp),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    focusedTextColor = Color(0xFF3F51B5),
-                    unfocusedTextColor = Color(0xFF3F51B5),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedIndicatorColor = Color(0xFF3F51B5),
+                    unfocusedIndicatorColor = Color(0xFF3F51B5),
                     cursorColor = Color(0xFF3F51B5),
-                    focusedBorderColor = Color(0xFF3F51B5),
-                    unfocusedBorderColor = Color(0xFF3F51B5)
+                    focusedTextColor = Color(0xFF3F51B5),
+                    unfocusedTextColor = Color(0xFF3F51B5)
                 ),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
             )
@@ -138,7 +142,7 @@ fun LoginScreen(auth: FirebaseAuth) {
                     }
             )
 
-
+            // Botón de inicio de sesión
             Button(
                 onClick = {
                     if (email.isEmpty() || password.isEmpty()) {
@@ -177,7 +181,7 @@ fun LoginScreen(auth: FirebaseAuth) {
                 )
             }
 
-
+            // Botón de registro
             Button(
                 onClick = {
                     val intent = Intent(context, RegisterActivity::class.java)
@@ -200,6 +204,7 @@ fun LoginScreen(auth: FirebaseAuth) {
         }
     }
 }
+
 
 
 

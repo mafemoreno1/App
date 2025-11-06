@@ -100,7 +100,7 @@ class Historial : ComponentActivity() {
             HistorialScreen(
                 onInicioClick = { navegarA(Inicio::class.java) },
                 onAlertasClick = { navegarA(AlertasActivity::class.java) },
-                onMetasClick = { },
+                onMetasClick = {navegarA(Metas::class.java) },
                 onAsistenteClick = { }
             )
         }
@@ -519,9 +519,6 @@ fun HistorialBottomNavigationBar(
     }
 }
 
-/* =====================
-   BASE DE DATOS + ALERTAS
-   ===================== */
 
 fun actualizarMontoRegistro(
     context: android.content.Context,
@@ -669,7 +666,6 @@ fun eliminarRegistro(
         .addOnSuccessListener {
             Toast.makeText(context, "${registro.tipo} '${registro.nombre}' eliminado", Toast.LENGTH_SHORT).show()
 
-
             Alertas.mostrarAlerta(
                 context = context,
                 titulo = "Registro eliminado",
@@ -683,13 +679,3 @@ fun eliminarRegistro(
             Toast.makeText(context, "Error al eliminar: ${it.message}", Toast.LENGTH_SHORT).show()
         }
 }
-
-
-
-
-
-
-
-
-
-

@@ -3,6 +3,7 @@ package com.example.aplicacion
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -25,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 import java.text.NumberFormat
+import java.text.SimpleDateFormat
 import java.util.*
 
 class AlertasActivity : ComponentActivity() {
@@ -61,6 +63,7 @@ class AlertasActivity : ComponentActivity() {
                                 Log.e("AlertasActivity", "Error al leer alerta: ${e.message}")
                             }
                         }
+                        // Ordenar por fecha (más reciente primero)
                         listaAlertas = tempList.sortedByDescending { it.fecha!! }
                     }
 
@@ -139,17 +142,17 @@ fun PantallaAlertas(listaAlertas: List<Alerta>, dbRefAlertas: DatabaseReference)
                 BottomNavItem(
                     icon = R.drawable.outline_notifications_24,
                     label = "Alertas",
-                    onClick = { /* Ya estás aquí */ }
+                    onClick = { }
                 )
                 BottomNavItem(
                     icon = R.drawable.outline_assignment_turned_in_24,
                     label = "Metas",
-                    onClick = { /* Ir a metas */ }
+                    onClick = { context.startActivity(Intent(context, Metas::class.java))  }
                 )
                 BottomNavItem(
                     icon = R.drawable.outline_person_24,
                     label = "Asistente IA",
-                    onClick = { /* Ir a Asistente IA */ }
+                    onClick = { }
                 )
             }
         }
@@ -211,13 +214,14 @@ fun PantallaAlertas(listaAlertas: List<Alerta>, dbRefAlertas: DatabaseReference)
                                     )
                                 }
 
+                                // ❌ Botón de eliminar alerta
                                 IconButton(
                                     onClick = {
                                         dbRefAlertas.child(alerta.id).removeValue()
                                     }
                                 ) {
                                     Icon(
-                                        painter = painterResource(id = R.drawable.outline_x_circle_24), // usa un ícono “x” existente
+                                        painter = painterResource(id = R.drawable.outline_x_circle_24),
                                         contentDescription = "Eliminar alerta",
                                         tint = Color.Red
                                     )
@@ -256,5 +260,40 @@ fun formatMensaje(texto: String): String {
     return texto.replace(regex) {
         val numero = it.value.replace("$", "").toDoubleOrNull() ?: 0.0
         "$" + formatter.format(numero)
+    }
+}
+
+/* ======================================================
+   🔔 IMPLEMENTACIÓN FUNCIONAL DE ALERTAS
+   ====================================================== */
+
+object Alertas {
+
+    fun mostrarAlerta(context: android.content.Context, titulo: String, mensaje: String, tipo: String = "info") {
+        val user = FirebaseAuth.getInstance().currentUser
+        if (user == null) {
+            Toast.makeText(context, "Usuario no autenticado.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val uid = user.uid
+        val dbRef = FirebaseDatabase.getInstance().getReference("alertas").child(uid)
+        val id = dbRef.push().key ?: return
+        val timestamp = System.currentTimeMillis()
+
+        val alerta = mapOf(
+            "id" to id,
+            "uid" to uid,
+            "titulo" to titulo,
+            "mensaje" to mensaje,
+            "tipo" to tipo,
+            "fecha" to timestamp,
+            "leida" to false
+        )
+
+        dbRef.child(id).setValue(alerta)
+            .addOnFailureListener {
+                Toast.makeText(context, "Error al guardar alerta: ${it.message}", Toast.LENGTH_SHORT).show()
+            }
     }
 }
